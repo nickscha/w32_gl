@@ -445,7 +445,7 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
     return call;
 }
 
-__declspec(dllexport) void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
+void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
     static camera cam;
     speg_state *state = (speg_state *)memory->permanentMemory;

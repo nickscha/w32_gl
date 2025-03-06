@@ -9,6 +9,6 @@ set DEF_COMPILER_FLAGS=-mconsole -march=native -mtune=native -std=c99 -pedantic 
 
 set DEF_FLAGS_LINKER=-lkernel32 -luser32 -lgdi32 -lopengl32
 
-gcc -s -Os -shared %DEF_COMPILER_FLAGS% speg.c -o speg.dll
-gcc -s -Os %DEF_COMPILER_FLAGS% w32_gl_nostdlib.c -o w32_gl_nostdlib.exe %DEF_FLAGS_LINKER%
+cc -s -Os -shared %DEF_COMPILER_FLAGS% speg.c -o speg.dll
+cc -s -Os %DEF_COMPILER_FLAGS% w32_gl_nostdlib.c -o w32_gl_nostdlib.exe %DEF_FLAGS_LINKER%
 w32_gl_nostdlib.exe

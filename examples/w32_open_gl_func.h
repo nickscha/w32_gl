@@ -116,6 +116,7 @@ BOOL w32_gl_init_gl_functions(void)
 #ifdef _MSC_VER
 #pragma warning(disable : 4068)
 #endif
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 
   wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
