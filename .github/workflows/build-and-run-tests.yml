@@ -11,7 +11,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
       - name: Compile types tests
-        run: ${{ matrix.cc }} -O2 -std=c89 -pedantic -Wall -Wextra -Werror -Wvla -Wconversion -Wdouble-promotion -Wsign-conversion -Wuninitialized -Winit-self -Wunused -Wunused-macros -Wunused-local-typedefs -o w32_gl_test_${{ matrix.cc }}.exe tests/w32_gl_test.c
+        run: ${{ matrix.cc }} -O2 -std=c99 -pedantic -Wall -Wextra -Werror -Wvla -Wconversion -Wdouble-promotion -Wsign-conversion -Wuninitialized -Winit-self -Wunused -Wunused-macros -Wunused-local-typedefs -o w32_gl_test_${{ matrix.cc }}.exe tests/w32_gl_test.c
       - name: Run types tests
         run: .\w32_gl_test_${{ matrix.cc }}.exe
       - name: Upload Artifact
