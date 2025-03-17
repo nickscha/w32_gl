@@ -1,5 +1,5 @@
-#include "../w32_gl.h"        /* Everything needed for Windows window/screen/opengl/mouse initialization */
-#include "w32_open_gl_func.h" /* Load OpenGl functions not directly provided by windows (e.g. OPEN_GL_VERSION > 1.1) */
+#include "../../w32_gl.h"        /* Everything needed for Windows window/screen/opengl/mouse initialization */
+#include "../w32_open_gl_func.h" /* Load OpenGl functions not directly provided by windows (e.g. OPEN_GL_VERSION > 1.1) */
 
 /* The platform independent nostdlib application code/logic */
 #define SPEG_IMPORT

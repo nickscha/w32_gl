@@ -18,7 +18,7 @@ int main() {
 
 ## Run Example: win32, opengl, nostdlib, freestsanding
 
-In this repo you will find the "examples/w32_gl_nostdlib.c" with the corresponding "build.bat" file which
+In this repo you will find the "examples/w32_gl_10_full3d_hot_reload/w32_gl_nostdlib.c" with the corresponding "build.bat" file which
 creates an executable only linked to "kernel32","user32","gdi32","opengl32" and is not using the C standard library and executes the program afterwards.
 
 Features:
@@ -34,5 +34,4 @@ Files:
 - **speg.c**: The application code/logic which is pure C89 without any linkings. build.bat produces **speg.dll**
 - **test.vs,test.fs,test_instanced.vs**: The OpenGL GLSL shaders
  
- 
-![Example of a C89 nostdlib win32/opengl program](/examples/example.png)
+![Example of a C89 nostdlib win32/opengl program](/examples/w32_gl_10_full3d_hot_reload/example.png)
