@@ -382,6 +382,7 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define GL_TEXTURE_BORDER_COLOR 0x1004
 
 /* WIN32 Function prototyes */
+#ifndef _WINDOWS_
 W32_API(BOOL) PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
 W32_API(BOOL) TranslateMessage(const MSG *lpMsg);
 W32_API(LRESULT) DispatchMessageA(const MSG *lpMsg);
@@ -463,6 +464,7 @@ W32_API(void) glTexParameteri(GLenum target, GLenum pname, GLint param);
 W32_API(void) glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
 W32_API(BOOL) RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
 W32_API(UINT) GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
+#endif
 
 DWORD w32_strlen(const char *str)
 {
