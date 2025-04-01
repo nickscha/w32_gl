@@ -54,8 +54,8 @@ typedef struct camera
 
 void camera_update_vectors(camera *cam)
 {
-    float yawRadians = vm_rad(cam->yaw);
-    float pitchRadians = vm_rad(cam->pitch);
+    float yawRadians = vm_radf(cam->yaw);
+    float pitchRadians = vm_radf(cam->pitch);
     float pitchRadiansCos = vm_cosf(pitchRadians);
 
     cam->front.x = vm_cosf(yawRadians) * pitchRadiansCos;
@@ -118,13 +118,13 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     if (input->mouseAttached)
     {
         const float mouseSensitivity = 0.1f;
-        cam->yaw += vm_min(input->mouseXOffset * mouseSensitivity, 89.0f);
-        cam->pitch -= vm_max(input->mouseYOffset * mouseSensitivity, -89.0f);
+        cam->yaw += vm_minf(input->mouseXOffset * mouseSensitivity, 89.0f);
+        cam->pitch -= vm_maxf(input->mouseYOffset * mouseSensitivity, -89.0f);
     }
 
     if (input->mouseScrollOffset != 0.0f)
     {
-        cam->fov = vm_clamp(cam->fov - (input->mouseScrollOffset * 2), 1.0f, 179.0f);
+        cam->fov = vm_clampf(cam->fov - (input->mouseScrollOffset * 2), 1.0f, 179.0f);
     }
 
     camera_update_vectors(cam);
@@ -190,7 +190,7 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
 
         if (i > 0)
         {
-            model = vm_m4x4_rotate(model, vm_rad(20.0f * (float)i), vm_v3_normalize(vm_v3(1.0f, 0.3f, 0.5f)));
+            model = vm_m4x4_rotate(model, vm_radf(20.0f * (float)i), vm_v3_normalize(vm_v3(1.0f, 0.3f, 0.5f)));
         }
 
         /* TODO: epsilon 0.15f is needed because cubes are rotating and its not considered in the frustum check */
@@ -227,10 +227,7 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
         {
             m4x4 mvp = vm_m4x4_mul(vm_m4x4_mul(projection, *view), model);
 
-            float dstMvp[VM_M4X4_ELEMENT_COUNT] = {0};
-            vm_m4x4_swap(mvp, dstMvp);
-
-            platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, targetColor.x, targetColor.y, targetColor.z);
+            platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, targetColor.x, targetColor.y, targetColor.z);
         }
     }
 }
@@ -275,9 +272,7 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
         {
             m4x4 mvp = vm_m4x4_mul(projection_view, axisModels[i]);
 
-            float dstMvp[VM_M4X4_ELEMENT_COUNT] = {0};
-            vm_m4x4_swap(mvp, dstMvp);
-            platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, axisColors[i].x, axisColors[i].y, axisColors[i].z);
+            platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, axisColors[i].x, axisColors[i].y, axisColors[i].z);
             state->renderedObjects++;
         }
         else
@@ -298,64 +293,54 @@ void render_transformations_test(m4x4 projection, m4x4 view, speg_state *state, 
     transformation child41 = {0};
     transformation child411 = {0};
 
-    /* TODO: tranformation matrices */
-    float dstMvp[VM_M4X4_ELEMENT_COUNT] = {0};
-
     static float rotation = 90.0f;
     rotation += (100.0f * (float)state->dt);
 
     parent = vm_tranformation_init();
     parent.position.x = 4.0f;
     /*parent.scale.y = 2.0f;*/
-    vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_rad(rotation));
+    vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_radf(rotation));
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&parent));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 1.0f, 0.0f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.0f, 0.0f);
 
     child.position = vm_v3(3.0f, 0.0f, 0.0f);
     child.parent = &parent;
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 1.0f, 0.8745f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child2.position = vm_v3(-3.0f, 0.0f, 0.0f);
     child2.parent = &parent;
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child2));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 1.0f, 0.8745f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child3.position = vm_v3(0.0f, 0.0f, 3.0f);
     child3.parent = &parent;
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child3));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 1.0f, 0.8745f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child4.position = vm_v3(0.0f, 0.0f, -3.0f);
     child4.parent = &parent;
-    child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_rad(rotation * 2.0f));
+    child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 2.0f));
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child4));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 1.0f, 0.8745f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child41.position = vm_v3(0.0f, 0.0f, -2.0f);
     child41.parent = &child4;
-    child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_rad(rotation * 4.0f));
+    child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 4.0f));
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child41));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 0.0f, 1.0f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 0.0f, 1.0f, 0.0f);
 
     child411.position = vm_v3(0.0f, 0.0f, -2.0f);
     child411.parent = &child41;
 
     mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child411));
-    vm_m4x4_swap(mvp, dstMvp);
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), dstMvp, 0.0f, 0.0f, 0.0f);
+    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 0.0f, 0.0f, 0.0f);
 }
 
 static speg_mesh cube = {
@@ -393,7 +378,6 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
     if (!calculatedPositions)
     {
         int i;
-        float curSwapModel[VM_M4X4_ELEMENT_COUNT] = {0};
 
         for (i = 0; i < numCubes; ++i)
         {
@@ -410,24 +394,22 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
 
             model = vm_m4x4_translate(vm_m4x4_identity(), targetPosition);
 
-            vm_m4x4_swap(model, curSwapModel);
-
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 0] = curSwapModel[0];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 1] = curSwapModel[1];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 2] = curSwapModel[2];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 3] = curSwapModel[3];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 4] = curSwapModel[4];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 5] = curSwapModel[5];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 6] = curSwapModel[6];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 7] = curSwapModel[7];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 8] = curSwapModel[8];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 9] = curSwapModel[9];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 10] = curSwapModel[10]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 11] = curSwapModel[11]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 12] = curSwapModel[12]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 13] = curSwapModel[13]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 14] = curSwapModel[14]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 15] = curSwapModel[15]; /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 0] = model.e[0];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 1] = model.e[1];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 2] = model.e[2];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 3] = model.e[3];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 4] = model.e[4];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 5] = model.e[5];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 6] = model.e[6];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 7] = model.e[7];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 8] = model.e[8];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 9] = model.e[9];   /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 10] = model.e[10]; /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 11] = model.e[11]; /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 12] = model.e[12]; /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 13] = model.e[13]; /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 14] = model.e[14]; /* projection matrix */
+            models[(i * VM_M4X4_ELEMENT_COUNT) + 15] = model.e[15]; /* projection matrix */
         }
 
         calculatedPositions = true;
@@ -454,8 +436,6 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     m4x4 projection;
     m4x4 view;
     speg_draw_call call;
-    float dstProjection[VM_M4X4_ELEMENT_COUNT] = {0};
-    float dstView[VM_M4X4_ELEMENT_COUNT] = {0};
 
     assert(memory);
     assert(memory->permanentMemorySize > 0);
@@ -485,7 +465,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     camera_update_movement(input, &cam, 10.0f * (float)state->dt);
 
-    projection = vm_m4x4_perspective(vm_rad(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
+    projection = vm_m4x4_perspective(vm_radf(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
 
     render_cubes(projection, &view, &cam, state, input, platformApi, 1000, 20.0f);
@@ -494,10 +474,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     call = render_cubes_instanced(state, 100.0f);
 
-    vm_m4x4_swap(projection, dstProjection);
-    vm_m4x4_swap(view, dstView);
-
-    platformApi->platform_draw_instanced(call.mesh, call.matrices_count, call.matrices, dstProjection, dstView, call.color);
+    platformApi->platform_draw_instanced(call.mesh, call.matrices_count, call.matrices, projection.e, view.e, call.color);
 }
 
 #ifdef __clang__

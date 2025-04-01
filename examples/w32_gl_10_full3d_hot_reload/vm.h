@@ -48,7 +48,7 @@ LICENSE
 /* Seed for the random number generator */
 static unsigned int vm_seed_lcg = 1;
 
-VM_API unsigned int vm_randi(void)
+VM_API VM_INLINE unsigned int vm_randi(void)
 {
     vm_seed_lcg = (VM_LCG_A * vm_seed_lcg + VM_LCG_C);
     return (vm_seed_lcg);
@@ -64,17 +64,17 @@ VM_API VM_INLINE float vm_randf_range(float min, float max)
     return (min + (max - min) * vm_randf());
 }
 
-VM_API VM_INLINE float vm_rad(float degree)
+VM_API VM_INLINE float vm_radf(float degree)
 {
     return (degree * (VM_PIf / 180.0f));
 }
 
-VM_API VM_INLINE float vm_deg(float radians)
+VM_API VM_INLINE float vm_degf(float radians)
 {
     return (radians * (180.0f / VM_PIf));
 }
 
-VM_API VM_INLINE float vm_max(float a, float b)
+VM_API VM_INLINE float vm_maxf(float a, float b)
 {
     return ((a > b) ? a : b);
 }
@@ -84,36 +84,45 @@ VM_API VM_INLINE int vm_maxi(int a, int b)
     return ((a > b) ? a : b);
 }
 
-VM_API VM_INLINE float vm_min(float a, float b)
+VM_API VM_INLINE float vm_minf(float a, float b)
 {
     return ((a < b) ? a : b);
 }
 
-VM_API VM_INLINE float vm_clamp(float value, float min, float max)
+VM_API VM_INLINE int vm_mini(int a, int b)
 {
-    return (vm_max(min, vm_min(max, value)));
+    return ((a < b) ? a : b);
+}
+
+VM_API VM_INLINE float vm_clampf(float value, float min, float max)
+{
+    return (vm_maxf(min, vm_minf(max, value)));
 }
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #elif defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4699) /* MSVC-specific aliasing warning */
 #endif
 VM_API VM_INLINE float vm_invsqrt(float number)
 {
-    long i;
-    float x2;
-    float y;
+    union
+    {
+        float f;
+        long i;
+    } conv;
+
+    float x2, y;
     const float threehalfs = 1.5F;
 
     x2 = number * 0.5F;
-    y = number;
-    i = *(long *)&y;
-    i = 0x5f3759df - (i >> 1);
-    y = *(float *)&i;
-    y = y * (threehalfs - (x2 * y * y));
+    conv.f = number;
+    conv.i = 0x5f3759df - (conv.i >> 1); /* Magic number for approximation */
+    y = conv.f;
+    y = y * (threehalfs - (x2 * y * y)); /* One iteration of Newton's method */
 
     return (y);
 }
@@ -242,10 +251,17 @@ VM_API VM_INLINE float vm_tanf(float x)
     return (vm_sinf(x) / vm_cosf(x));
 }
 
+VM_API VM_INLINE float vm_absf(float x)
+{
+    return (x < 0.0f ? -x : x);
+}
+
 /* #############################################################################
  * # VECTOR 2 FUNCTIONS
  * #############################################################################
  */
+#define VM_V2_ELEMENT_COUNT 2
+
 typedef struct v2
 {
     float x;
@@ -372,10 +388,17 @@ VM_API VM_INLINE v2 vm_v2_divf(v2 a, float b)
     return (result);
 }
 
+VM_API VM_INLINE float vm_v2_length_manhatten(v2 start, v2 end, float unit)
+{
+    return ((vm_absf(start.x - end.x) + vm_absf(start.y - end.y)) / (unit == 0.0f ? 1.0f : unit));
+}
+
 /* #############################################################################
  * # VECTOR 3 FUNCTIONS
  * #############################################################################
  */
+#define VM_V3_ELEMENT_COUNT 3
+
 typedef struct v3
 {
     float x;
@@ -554,10 +577,17 @@ VM_API VM_INLINE v3 vm_v3_lerp(v3 a, v3 b, float t)
     return (result);
 }
 
+VM_API VM_INLINE float vm_v3_length_manhatten(v3 start, v3 end, float unit)
+{
+    return ((vm_absf(start.x - end.x) + vm_absf(start.y - end.y) + vm_absf(start.z - end.z)) / (unit == 0.0f ? 1.0f : unit));
+}
+
 /* #############################################################################
  * # VECTOR 4 FUNCTIONS
  * #############################################################################
  */
+#define VM_V4_ELEMENT_COUNT 4
+
 typedef struct v4
 {
     float x;
@@ -719,34 +749,40 @@ VM_API VM_INLINE float vm_v4_dot(v4 v1, v4 v2)
  */
 #define VM_M4X4_ELEMENT_COUNT 16
 
+#ifdef VM_M4X4_ROW_MAJOR_ORDER
+#define VM_M4X4_AT(row, col) ((row) * 4 + (col)) /* Row-major order */
+#else
+#define VM_M4X4_AT(row, col) ((col) * 4 + (row)) /* Column-major order */
+#endif
+
 typedef struct m4x4
 {
-    float e[4][4];
+    float e[VM_M4X4_ELEMENT_COUNT];
 } m4x4;
 
 VM_API VM_INLINE m4x4 vm_m4x4_zero(void)
 {
     m4x4 result;
 
-    result.e[0][0] = 0.0f;
-    result.e[0][1] = 0.0f;
-    result.e[0][2] = 0.0f;
-    result.e[0][3] = 0.0f;
+    result.e[VM_M4X4_AT(0, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(0, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(0, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(0, 3)] = 0.0f;
 
-    result.e[1][0] = 0.0f;
-    result.e[1][1] = 0.0f;
-    result.e[1][2] = 0.0f;
-    result.e[1][3] = 0.0f;
+    result.e[VM_M4X4_AT(1, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(1, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(1, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(1, 3)] = 0.0f;
 
-    result.e[2][0] = 0.0f;
-    result.e[2][1] = 0.0f;
-    result.e[2][2] = 0.0f;
-    result.e[2][3] = 0.0f;
+    result.e[VM_M4X4_AT(2, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(2, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(2, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(2, 3)] = 0.0f;
 
-    result.e[3][0] = 0.0f;
-    result.e[3][1] = 0.0f;
-    result.e[3][2] = 0.0f;
-    result.e[3][3] = 0.0f;
+    result.e[VM_M4X4_AT(3, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 3)] = 0.0f;
 
     return (result);
 }
@@ -755,25 +791,25 @@ VM_API VM_INLINE m4x4 vm_m4x4_identity(void)
 {
     m4x4 result;
 
-    result.e[0][0] = 1.0f;
-    result.e[0][1] = 0.0f;
-    result.e[0][2] = 0.0f;
-    result.e[0][3] = 0.0f;
+    result.e[VM_M4X4_AT(0, 0)] = 1.0f;
+    result.e[VM_M4X4_AT(0, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(0, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(0, 3)] = 0.0f;
 
-    result.e[1][0] = 0.0f;
-    result.e[1][1] = 1.0f;
-    result.e[1][2] = 0.0f;
-    result.e[1][3] = 0.0f;
+    result.e[VM_M4X4_AT(1, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(1, 1)] = 1.0f;
+    result.e[VM_M4X4_AT(1, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(1, 3)] = 0.0f;
 
-    result.e[2][0] = 0.0f;
-    result.e[2][1] = 0.0f;
-    result.e[2][2] = 1.0f;
-    result.e[2][3] = 0.0f;
+    result.e[VM_M4X4_AT(2, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(2, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(2, 2)] = 1.0f;
+    result.e[VM_M4X4_AT(2, 3)] = 0.0f;
 
-    result.e[3][0] = 0.0f;
-    result.e[3][1] = 0.0f;
-    result.e[3][2] = 0.0f;
-    result.e[3][3] = 1.0f;
+    result.e[VM_M4X4_AT(3, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (result);
 }
@@ -785,18 +821,37 @@ VM_API VM_INLINE m4x4 vm_m4x4_mul(m4x4 a, m4x4 b)
     int i = 0;
     for (; i < 4; ++i)
     {
-        int j = 0;
-        for (; j < 4; ++j)
-        {
-            result.e[i][j] =
-                a.e[i][0] * b.e[0][j] +
-                a.e[i][1] * b.e[1][j] +
-                a.e[i][2] * b.e[2][j] +
-                a.e[i][3] * b.e[3][j];
-        }
+        result.e[VM_M4X4_AT(i, 0)] = a.e[VM_M4X4_AT(i, 0)] * b.e[VM_M4X4_AT(0, 0)] + a.e[VM_M4X4_AT(i, 1)] * b.e[VM_M4X4_AT(1, 0)] + a.e[VM_M4X4_AT(i, 2)] * b.e[VM_M4X4_AT(2, 0)] + a.e[VM_M4X4_AT(i, 3)] * b.e[VM_M4X4_AT(3, 0)];
+        result.e[VM_M4X4_AT(i, 1)] = a.e[VM_M4X4_AT(i, 0)] * b.e[VM_M4X4_AT(0, 1)] + a.e[VM_M4X4_AT(i, 1)] * b.e[VM_M4X4_AT(1, 1)] + a.e[VM_M4X4_AT(i, 2)] * b.e[VM_M4X4_AT(2, 1)] + a.e[VM_M4X4_AT(i, 3)] * b.e[VM_M4X4_AT(3, 1)];
+        result.e[VM_M4X4_AT(i, 2)] = a.e[VM_M4X4_AT(i, 0)] * b.e[VM_M4X4_AT(0, 2)] + a.e[VM_M4X4_AT(i, 1)] * b.e[VM_M4X4_AT(1, 2)] + a.e[VM_M4X4_AT(i, 2)] * b.e[VM_M4X4_AT(2, 2)] + a.e[VM_M4X4_AT(i, 3)] * b.e[VM_M4X4_AT(3, 2)];
+        result.e[VM_M4X4_AT(i, 3)] = a.e[VM_M4X4_AT(i, 0)] * b.e[VM_M4X4_AT(0, 3)] + a.e[VM_M4X4_AT(i, 1)] * b.e[VM_M4X4_AT(1, 3)] + a.e[VM_M4X4_AT(i, 2)] * b.e[VM_M4X4_AT(2, 3)] + a.e[VM_M4X4_AT(i, 3)] * b.e[VM_M4X4_AT(3, 3)];
     }
 
     return (result);
+}
+
+VM_API VM_INLINE int vm_m4x4_equals(m4x4 a, m4x4 b)
+{
+    return (
+        a.e[VM_M4X4_AT(0, 0)] == b.e[VM_M4X4_AT(0, 0)] &&
+        a.e[VM_M4X4_AT(0, 1)] == b.e[VM_M4X4_AT(0, 1)] &&
+        a.e[VM_M4X4_AT(0, 2)] == b.e[VM_M4X4_AT(0, 2)] &&
+        a.e[VM_M4X4_AT(0, 3)] == b.e[VM_M4X4_AT(0, 3)] &&
+
+        a.e[VM_M4X4_AT(1, 0)] == b.e[VM_M4X4_AT(1, 0)] &&
+        a.e[VM_M4X4_AT(1, 1)] == b.e[VM_M4X4_AT(1, 1)] &&
+        a.e[VM_M4X4_AT(1, 2)] == b.e[VM_M4X4_AT(1, 2)] &&
+        a.e[VM_M4X4_AT(1, 3)] == b.e[VM_M4X4_AT(1, 3)] &&
+
+        a.e[VM_M4X4_AT(2, 0)] == b.e[VM_M4X4_AT(2, 0)] &&
+        a.e[VM_M4X4_AT(2, 1)] == b.e[VM_M4X4_AT(2, 1)] &&
+        a.e[VM_M4X4_AT(2, 2)] == b.e[VM_M4X4_AT(2, 2)] &&
+        a.e[VM_M4X4_AT(2, 3)] == b.e[VM_M4X4_AT(2, 3)] &&
+
+        a.e[VM_M4X4_AT(3, 0)] == b.e[VM_M4X4_AT(3, 0)] &&
+        a.e[VM_M4X4_AT(3, 1)] == b.e[VM_M4X4_AT(3, 1)] &&
+        a.e[VM_M4X4_AT(3, 2)] == b.e[VM_M4X4_AT(3, 2)] &&
+        a.e[VM_M4X4_AT(3, 3)] == b.e[VM_M4X4_AT(3, 3)]);
 }
 
 VM_API VM_INLINE m4x4 vm_m4x4_perspective(float fov, float aspectRatio, float zNear, float zFar)
@@ -806,11 +861,11 @@ VM_API VM_INLINE m4x4 vm_m4x4_perspective(float fov, float aspectRatio, float zN
 
     m4x4 result = vm_m4x4_zero();
 
-    result.e[0][0] = f / aspectRatio;
-    result.e[1][1] = f;
-    result.e[2][2] = (zNear + zFar) * fn;
-    result.e[2][3] = 2.0f * zNear * zFar * fn;
-    result.e[3][2] = -1.0f;
+    result.e[VM_M4X4_AT(0, 0)] = f / aspectRatio;
+    result.e[VM_M4X4_AT(1, 1)] = f;
+    result.e[VM_M4X4_AT(2, 2)] = (zNear + zFar) * fn;
+    result.e[VM_M4X4_AT(2, 3)] = (2.0f * zNear * zFar) * fn;
+    result.e[VM_M4X4_AT(3, 2)] = -1.0f;
 
     return (result);
 }
@@ -823,13 +878,13 @@ VM_API VM_INLINE m4x4 vm_m4x4_orthographic(float left, float right, float bottom
 
     m4x4 result = vm_m4x4_zero();
 
-    result.e[0][0] = 2.0f / width;
-    result.e[0][3] = -(right + left) / width;
-    result.e[1][1] = 2.0f / height;
-    result.e[1][3] = -(top + bottom) / height;
-    result.e[2][2] = -2.0f / depth;
-    result.e[2][3] = -(far + near) / depth;
-    result.e[3][3] = 1.0f;
+    result.e[VM_M4X4_AT(0, 0)] = 2.0f / width;
+    result.e[VM_M4X4_AT(0, 3)] = -(right + left) / width;
+    result.e[VM_M4X4_AT(1, 1)] = 2.0f / height;
+    result.e[VM_M4X4_AT(1, 3)] = -(top + bottom) / height;
+    result.e[VM_M4X4_AT(2, 2)] = -2.0f / depth;
+    result.e[VM_M4X4_AT(2, 3)] = -(far + near) / depth;
+    result.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (result);
 }
@@ -838,25 +893,25 @@ VM_API VM_INLINE m4x4 vm_m4x4_rotation(v3 forward, v3 up, v3 right)
 {
     m4x4 result = vm_m4x4_zero();
 
-    result.e[0][0] = right.x;
-    result.e[0][1] = right.y;
-    result.e[0][2] = right.z;
-    result.e[0][3] = 0.0f;
+    result.e[VM_M4X4_AT(0, 0)] = right.x;
+    result.e[VM_M4X4_AT(0, 1)] = right.y;
+    result.e[VM_M4X4_AT(0, 2)] = right.z;
+    result.e[VM_M4X4_AT(0, 3)] = 0.0f;
 
-    result.e[1][0] = up.x;
-    result.e[1][1] = up.y;
-    result.e[1][2] = up.z;
-    result.e[1][3] = 0.0f;
+    result.e[VM_M4X4_AT(1, 0)] = up.x;
+    result.e[VM_M4X4_AT(1, 1)] = up.y;
+    result.e[VM_M4X4_AT(1, 2)] = up.z;
+    result.e[VM_M4X4_AT(1, 3)] = 0.0f;
 
-    result.e[2][0] = forward.x;
-    result.e[2][1] = forward.y;
-    result.e[2][2] = forward.z;
-    result.e[2][3] = 0.0f;
+    result.e[VM_M4X4_AT(2, 0)] = forward.x;
+    result.e[VM_M4X4_AT(2, 1)] = forward.y;
+    result.e[VM_M4X4_AT(2, 2)] = forward.z;
+    result.e[VM_M4X4_AT(2, 3)] = 0.0f;
 
-    result.e[3][0] = 0.0f;
-    result.e[3][1] = 0.0f;
-    result.e[3][2] = 0.0f;
-    result.e[3][3] = 1.0f;
+    result.e[VM_M4X4_AT(3, 0)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 1)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 2)] = 0.0f;
+    result.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (result);
 }
@@ -865,9 +920,9 @@ VM_API VM_INLINE m4x4 vm_m4x4_translate(m4x4 src, v3 b)
 {
     m4x4 result = src;
 
-    result.e[0][3] = b.x;
-    result.e[1][3] = b.y;
-    result.e[2][3] = b.z;
+    result.e[VM_M4X4_AT(0, 3)] = b.x;
+    result.e[VM_M4X4_AT(1, 3)] = b.y;
+    result.e[VM_M4X4_AT(2, 3)] = b.z;
 
     return (result);
 }
@@ -876,10 +931,10 @@ VM_API VM_INLINE m4x4 vm_m4x4_scale(m4x4 src, v3 factor)
 {
     m4x4 result = src;
 
-    result.e[0][0] = factor.x;
-    result.e[1][1] = factor.y;
-    result.e[2][2] = factor.z;
-    result.e[3][3] = 1.0f;
+    result.e[VM_M4X4_AT(0, 0)] = factor.x;
+    result.e[VM_M4X4_AT(1, 1)] = factor.y;
+    result.e[VM_M4X4_AT(2, 2)] = factor.z;
+    result.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (result);
 }
@@ -888,33 +943,28 @@ VM_API VM_INLINE m4x4 vm_m4x4_scalef(m4x4 src, float factor)
 {
     m4x4 result = src;
 
-    result.e[0][0] = factor;
-    result.e[1][1] = factor;
-    result.e[2][2] = factor;
-    result.e[3][3] = 1.0f;
+    result.e[VM_M4X4_AT(0, 0)] = factor;
+    result.e[VM_M4X4_AT(1, 1)] = factor;
+    result.e[VM_M4X4_AT(2, 2)] = factor;
+    result.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (result);
 }
 
-VM_API VM_INLINE void vm_m4x4_swap(m4x4 src, float *dst)
+VM_API VM_INLINE m4x4 vm_m4x4_swap(m4x4 src)
 {
-    /* column-major-order */
-    dst[0] = src.e[0][0];
-    dst[1] = src.e[1][0];
-    dst[2] = src.e[2][0];
-    dst[3] = src.e[3][0];
-    dst[4] = src.e[0][1];
-    dst[5] = src.e[1][1];
-    dst[6] = src.e[2][1];
-    dst[7] = src.e[3][1];
-    dst[8] = src.e[0][2];
-    dst[9] = src.e[1][2];
-    dst[10] = src.e[2][2];
-    dst[11] = src.e[3][2];
-    dst[12] = src.e[0][3]; /* transform x component */
-    dst[13] = src.e[1][3]; /* transform z component */
-    dst[14] = src.e[2][3]; /* transform y component */
-    dst[15] = src.e[3][3];
+    m4x4 result;
+    int i, j;
+
+    for (i = 0; i < 4; ++i)
+    {
+        for (j = 0; j < 4; ++j)
+        {
+            result.e[VM_M4X4_AT(i, j)] = src.e[VM_M4X4_AT(j, i)];
+        }
+    }
+
+    return (result);
 }
 
 VM_API VM_INLINE m4x4 vm_m4x4_rotate(m4x4 src, float angle, v3 axis)
@@ -932,37 +982,37 @@ VM_API VM_INLINE m4x4 vm_m4x4_rotate(m4x4 src, float angle, v3 axis)
     v3 f;
 
     a = vm_v3_mulf(axisn, v.x);
-    rot.e[0][0] = a.x;
-    rot.e[1][0] = a.y;
-    rot.e[2][0] = a.z;
+    rot.e[VM_M4X4_AT(0, 0)] = a.x;
+    rot.e[VM_M4X4_AT(1, 0)] = a.y;
+    rot.e[VM_M4X4_AT(2, 0)] = a.z;
 
     b = vm_v3_mulf(axisn, v.y);
-    rot.e[0][1] = b.x;
-    rot.e[1][1] = b.y;
-    rot.e[2][1] = b.z;
+    rot.e[VM_M4X4_AT(0, 1)] = b.x;
+    rot.e[VM_M4X4_AT(1, 1)] = b.y;
+    rot.e[VM_M4X4_AT(2, 1)] = b.z;
 
     f = vm_v3_mulf(axisn, v.z);
-    rot.e[0][2] = f.x;
-    rot.e[1][2] = f.y;
-    rot.e[2][2] = f.z;
+    rot.e[VM_M4X4_AT(0, 2)] = f.x;
+    rot.e[VM_M4X4_AT(1, 2)] = f.y;
+    rot.e[VM_M4X4_AT(2, 2)] = f.z;
 
-    rot.e[0][0] += c;
-    rot.e[0][1] -= vs.z;
-    rot.e[0][2] += vs.y;
-    rot.e[1][0] += vs.z;
-    rot.e[1][1] += c;
-    rot.e[1][2] -= vs.x;
-    rot.e[2][0] -= vs.y;
-    rot.e[2][1] += vs.x;
-    rot.e[2][2] += c;
+    rot.e[VM_M4X4_AT(0, 0)] += c;
+    rot.e[VM_M4X4_AT(0, 1)] -= vs.z;
+    rot.e[VM_M4X4_AT(0, 2)] += vs.y;
+    rot.e[VM_M4X4_AT(1, 0)] += vs.z;
+    rot.e[VM_M4X4_AT(1, 1)] += c;
+    rot.e[VM_M4X4_AT(1, 2)] -= vs.x;
+    rot.e[VM_M4X4_AT(2, 0)] -= vs.y;
+    rot.e[VM_M4X4_AT(2, 1)] += vs.x;
+    rot.e[VM_M4X4_AT(2, 2)] += c;
 
-    rot.e[3][0] = 0.0f;
-    rot.e[3][1] = 0.0f;
-    rot.e[3][2] = 0.0f;
-    rot.e[0][3] = 0.0f;
-    rot.e[1][3] = 0.0f;
-    rot.e[2][3] = 0.0f;
-    rot.e[3][3] = 1.0f;
+    rot.e[VM_M4X4_AT(3, 0)] = 0.0f;
+    rot.e[VM_M4X4_AT(3, 1)] = 0.0f;
+    rot.e[VM_M4X4_AT(3, 2)] = 0.0f;
+    rot.e[VM_M4X4_AT(0, 3)] = 0.0f;
+    rot.e[VM_M4X4_AT(1, 3)] = 0.0f;
+    rot.e[VM_M4X4_AT(2, 3)] = 0.0f;
+    rot.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (vm_m4x4_mul(src, rot));
 }
@@ -975,19 +1025,19 @@ VM_API VM_INLINE m4x4 vm_m4x4_lookAt(v3 eye, v3 target, v3 up)
 
     m4x4 result = vm_m4x4_zero();
 
-    result.e[0][0] = s.x;
-    result.e[0][1] = s.y;
-    result.e[0][2] = s.z;
-    result.e[0][3] = -vm_v3_dot(s, eye);
-    result.e[1][0] = u.x;
-    result.e[1][1] = u.y;
-    result.e[1][2] = u.z;
-    result.e[1][3] = -vm_v3_dot(u, eye);
-    result.e[2][0] = -f.x;
-    result.e[2][1] = -f.y;
-    result.e[2][2] = -f.z;
-    result.e[2][3] = vm_v3_dot(f, eye);
-    result.e[3][3] = 1.0f;
+    result.e[VM_M4X4_AT(0, 0)] = s.x;
+    result.e[VM_M4X4_AT(0, 1)] = s.y;
+    result.e[VM_M4X4_AT(0, 2)] = s.z;
+    result.e[VM_M4X4_AT(0, 3)] = -vm_v3_dot(s, eye);
+    result.e[VM_M4X4_AT(1, 0)] = u.x;
+    result.e[VM_M4X4_AT(1, 1)] = u.y;
+    result.e[VM_M4X4_AT(1, 2)] = u.z;
+    result.e[VM_M4X4_AT(1, 3)] = -vm_v3_dot(u, eye);
+    result.e[VM_M4X4_AT(2, 0)] = -f.x;
+    result.e[VM_M4X4_AT(2, 1)] = -f.y;
+    result.e[VM_M4X4_AT(2, 2)] = -f.z;
+    result.e[VM_M4X4_AT(2, 3)] = vm_v3_dot(f, eye);
+    result.e[VM_M4X4_AT(3, 3)] = 1.0f;
 
     return (result);
 }
@@ -996,13 +1046,9 @@ VM_API VM_INLINE m4x4 vm_m4x4_lookAt(v3 eye, v3 target, v3 up)
  * # Quaternion FUNCTIONS
  * ######################################################################## #####
  */
-typedef struct quat
-{
-    float x;
-    float y;
-    float z;
-    float w;
-} quat;
+#define VM_QUAT_ELEMENT_COUNT 4
+
+typedef v4 quat;
 
 VM_API VM_INLINE quat vm_quat(float x, float y, float z, float w)
 {
@@ -1220,40 +1266,40 @@ VM_API VM_INLINE frustum vm_frustum_extract_planes(m4x4 projection_view)
     v4 *frustum_data;
 
     /* Left plane */
-    result.leftPlane.x = projection_view.e[3][0] + projection_view.e[0][0];
-    result.leftPlane.y = projection_view.e[3][1] + projection_view.e[0][1];
-    result.leftPlane.z = projection_view.e[3][2] + projection_view.e[0][2];
-    result.leftPlane.w = projection_view.e[3][3] + projection_view.e[0][3];
+    result.leftPlane.x = projection_view.e[VM_M4X4_AT(3, 0)] + projection_view.e[VM_M4X4_AT(0, 0)];
+    result.leftPlane.y = projection_view.e[VM_M4X4_AT(3, 1)] + projection_view.e[VM_M4X4_AT(0, 1)];
+    result.leftPlane.z = projection_view.e[VM_M4X4_AT(3, 2)] + projection_view.e[VM_M4X4_AT(0, 2)];
+    result.leftPlane.w = projection_view.e[VM_M4X4_AT(3, 3)] + projection_view.e[VM_M4X4_AT(0, 3)];
 
     /* Right plane */
-    result.rightPlane.x = projection_view.e[3][0] - projection_view.e[0][0];
-    result.rightPlane.y = projection_view.e[3][1] - projection_view.e[0][1];
-    result.rightPlane.z = projection_view.e[3][2] - projection_view.e[0][2];
-    result.rightPlane.w = projection_view.e[3][3] - projection_view.e[0][3];
+    result.rightPlane.x = projection_view.e[VM_M4X4_AT(3, 0)] - projection_view.e[VM_M4X4_AT(0, 0)];
+    result.rightPlane.y = projection_view.e[VM_M4X4_AT(3, 1)] - projection_view.e[VM_M4X4_AT(0, 1)];
+    result.rightPlane.z = projection_view.e[VM_M4X4_AT(3, 2)] - projection_view.e[VM_M4X4_AT(0, 2)];
+    result.rightPlane.w = projection_view.e[VM_M4X4_AT(3, 3)] - projection_view.e[VM_M4X4_AT(0, 3)];
 
     /* Bottom plane */
-    result.bottomPlane.x = projection_view.e[3][0] + projection_view.e[1][0];
-    result.bottomPlane.y = projection_view.e[3][1] + projection_view.e[1][1];
-    result.bottomPlane.z = projection_view.e[3][2] + projection_view.e[1][2];
-    result.bottomPlane.w = projection_view.e[3][3] + projection_view.e[1][3];
+    result.bottomPlane.x = projection_view.e[VM_M4X4_AT(3, 0)] + projection_view.e[VM_M4X4_AT(1, 0)];
+    result.bottomPlane.y = projection_view.e[VM_M4X4_AT(3, 1)] + projection_view.e[VM_M4X4_AT(1, 1)];
+    result.bottomPlane.z = projection_view.e[VM_M4X4_AT(3, 2)] + projection_view.e[VM_M4X4_AT(1, 2)];
+    result.bottomPlane.w = projection_view.e[VM_M4X4_AT(3, 3)] + projection_view.e[VM_M4X4_AT(1, 3)];
 
     /* Top plane */
-    result.topPlane.x = projection_view.e[3][0] - projection_view.e[1][0];
-    result.topPlane.y = projection_view.e[3][1] - projection_view.e[1][1];
-    result.topPlane.z = projection_view.e[3][2] - projection_view.e[1][2];
-    result.topPlane.w = projection_view.e[3][3] - projection_view.e[1][3];
+    result.topPlane.x = projection_view.e[VM_M4X4_AT(3, 0)] - projection_view.e[VM_M4X4_AT(1, 0)];
+    result.topPlane.y = projection_view.e[VM_M4X4_AT(3, 1)] - projection_view.e[VM_M4X4_AT(1, 1)];
+    result.topPlane.z = projection_view.e[VM_M4X4_AT(3, 2)] - projection_view.e[VM_M4X4_AT(1, 2)];
+    result.topPlane.w = projection_view.e[VM_M4X4_AT(3, 3)] - projection_view.e[VM_M4X4_AT(1, 3)];
 
     /* Near plane */
-    result.nearPlane.x = projection_view.e[3][0] + projection_view.e[2][0];
-    result.nearPlane.y = projection_view.e[3][1] + projection_view.e[2][1];
-    result.nearPlane.z = projection_view.e[3][2] + projection_view.e[2][2];
-    result.nearPlane.w = projection_view.e[3][3] + projection_view.e[2][3];
+    result.nearPlane.x = projection_view.e[VM_M4X4_AT(3, 0)] + projection_view.e[VM_M4X4_AT(2, 0)];
+    result.nearPlane.y = projection_view.e[VM_M4X4_AT(3, 1)] + projection_view.e[VM_M4X4_AT(2, 1)];
+    result.nearPlane.z = projection_view.e[VM_M4X4_AT(3, 2)] + projection_view.e[VM_M4X4_AT(2, 2)];
+    result.nearPlane.w = projection_view.e[VM_M4X4_AT(3, 3)] + projection_view.e[VM_M4X4_AT(2, 3)];
 
     /* Far plane */
-    result.farPlane.x = projection_view.e[3][0] - projection_view.e[2][0];
-    result.farPlane.y = projection_view.e[3][1] - projection_view.e[2][1];
-    result.farPlane.z = projection_view.e[3][2] - projection_view.e[2][2];
-    result.farPlane.w = projection_view.e[3][3] - projection_view.e[2][3];
+    result.farPlane.x = projection_view.e[VM_M4X4_AT(3, 0)] - projection_view.e[VM_M4X4_AT(2, 0)];
+    result.farPlane.y = projection_view.e[VM_M4X4_AT(3, 1)] - projection_view.e[VM_M4X4_AT(2, 1)];
+    result.farPlane.z = projection_view.e[VM_M4X4_AT(3, 2)] - projection_view.e[VM_M4X4_AT(2, 2)];
+    result.farPlane.w = projection_view.e[VM_M4X4_AT(3, 3)] - projection_view.e[VM_M4X4_AT(2, 3)];
 
     frustum_data = vm_frustum_data(&result);
 
@@ -1377,9 +1423,9 @@ VM_API VM_INLINE m4x4 vm_transformation_matrix(transformation *t)
         t->scale = vm_v3_one();
     }
 
-    scale_matrix.e[0][0] = t->scale.x;
-    scale_matrix.e[1][1] = t->scale.y;
-    scale_matrix.e[2][2] = t->scale.z;
+    scale_matrix.e[VM_M4X4_AT(0, 0)] = t->scale.x;
+    scale_matrix.e[VM_M4X4_AT(1, 1)] = t->scale.y;
+    scale_matrix.e[VM_M4X4_AT(2, 2)] = t->scale.z;
 
     if (t->parent)
     {
