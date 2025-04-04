@@ -70,7 +70,7 @@ static camera camera_init(void)
 {
     camera cam = {0};
 
-    cam.position = vm_v3_zero();
+    cam.position = vm_v3_zero;
     cam.front = vm_v3(0.0f, 0.0f, -1.0f);
     cam.up = vm_v3(0.0f, 1.0f, 0.0f);
     cam.worldUp = cam.up;
@@ -186,7 +186,7 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
         }
 
         /* calculate the model matrix for each object and pass it to shader before drawing */
-        model = vm_m4x4_translate(vm_m4x4_identity(), targetPosition);
+        model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
 
         if (i > 0)
         {
@@ -244,7 +244,7 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
     m4x4 projection_view = vm_m4x4_mul(projection, view);
     frustum frustum_planes = vm_frustum_extract_planes(projection_view);
 
-    m4x4 axisModel = vm_m4x4_translate(vm_m4x4_identity(), axisPosition);
+    m4x4 axisModel = vm_m4x4_translate(vm_m4x4_identity, axisPosition);
     v3 axisColors[3];   /* X, Y , Z*/
     v3 axisSizes[3];    /* X, Y , Z*/
     m4x4 axisModels[3]; /* X, Y , Z*/
@@ -381,7 +381,8 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
 
         for (i = 0; i < numCubes; ++i)
         {
-            v3 targetPosition = vm_v3_zero();
+            v3 targetPosition = vm_v3_zero;
+            int idx_base = (i * VM_M4X4_ELEMENT_COUNT);
 
             if (i > 0)
             {
@@ -392,24 +393,24 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
                 targetPosition.z = vm_randf_range(rangeMin, rangeMax);
             }
 
-            model = vm_m4x4_translate(vm_m4x4_identity(), targetPosition);
+            model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
 
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 0] = model.e[0];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 1] = model.e[1];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 2] = model.e[2];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 3] = model.e[3];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 4] = model.e[4];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 5] = model.e[5];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 6] = model.e[6];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 7] = model.e[7];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 8] = model.e[8];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 9] = model.e[9];   /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 10] = model.e[10]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 11] = model.e[11]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 12] = model.e[12]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 13] = model.e[13]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 14] = model.e[14]; /* projection matrix */
-            models[(i * VM_M4X4_ELEMENT_COUNT) + 15] = model.e[15]; /* projection matrix */
+            models[idx_base + 0] = model.e[0];   /* projection matrix */
+            models[idx_base + 1] = model.e[1];   /* projection matrix */
+            models[idx_base + 2] = model.e[2];   /* projection matrix */
+            models[idx_base + 3] = model.e[3];   /* projection matrix */
+            models[idx_base + 4] = model.e[4];   /* projection matrix */
+            models[idx_base + 5] = model.e[5];   /* projection matrix */
+            models[idx_base + 6] = model.e[6];   /* projection matrix */
+            models[idx_base + 7] = model.e[7];   /* projection matrix */
+            models[idx_base + 8] = model.e[8];   /* projection matrix */
+            models[idx_base + 9] = model.e[9];   /* projection matrix */
+            models[idx_base + 10] = model.e[10]; /* projection matrix */
+            models[idx_base + 11] = model.e[11]; /* projection matrix */
+            models[idx_base + 12] = model.e[12]; /* projection matrix */
+            models[idx_base + 13] = model.e[13]; /* projection matrix */
+            models[idx_base + 14] = model.e[14]; /* projection matrix */
+            models[idx_base + 15] = model.e[15]; /* projection matrix */
         }
 
         calculatedPositions = true;
