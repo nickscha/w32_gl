@@ -270,12 +270,12 @@ void render_transformations_test(m4x4 projection, m4x4 view, speg_state *state, 
 {
     transformation parent;
     m4x4 mvp;
-    transformation child = {0};
-    transformation child2 = {0};
-    transformation child3 = {0};
-    transformation child4 = {0};
-    transformation child41 = {0};
-    transformation child411 = {0};
+    transformation child = vm_tranformation_init();
+    transformation child2 = vm_tranformation_init();
+    transformation child3 = vm_tranformation_init();
+    transformation child4 = vm_tranformation_init();
+    transformation child41 = vm_tranformation_init();
+    transformation child411 = vm_tranformation_init();
 
     static float rotation = 90.0f;
     rotation += (100.0f * (float)state->dt);
