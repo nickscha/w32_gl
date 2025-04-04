@@ -430,10 +430,15 @@ void loadCode(void)
   CopyFileA(dllName, dllTempName, false);
 
   code.hDLL = LoadLibraryA(dllTempName);
-  assert(code.hDLL);
+  code.dllName = dllName;
+
+  if (!code.hDLL)
+  {
+    return;
+  }
 
   code.lastWriteTime = w32_file_mod_time(dllName);
-  code.dllName = dllName;
+  assert(code.hDLL);
 
   /* FIX for ERROR: ISO C forbids conversion of object pointer to function pointer type*/
   /* https://pubs.opengroup.org/onlinepubs/009695399/functions/dlsym.html */
@@ -956,6 +961,10 @@ mainCRTStartup(void)
     {
       win32_printf("[hot] reload code dll\n");
       loadCode();
+      if (!code.hDLL)
+      {
+        code.lastWriteTime = ddlFtCurrent;
+      }
     }
 
     FILETIME vs = w32_file_mod_time(shaders.instanced.vsFile);
