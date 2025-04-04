@@ -609,7 +609,7 @@ void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_in
           globalPause = !globalPause;
         }
 
-        else if (vkCode == VK_RETURN)
+        else if (vkCode == VK_RETURN || vkCode == VK_ESCAPE)
         {
           globalRunning = false;
         }

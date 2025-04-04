@@ -210,7 +210,6 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
         if (draw)
         {
             m4x4 mvp = vm_m4x4_mul(vm_m4x4_mul(projection, *view), model);
-
             platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, targetColor.x, targetColor.y, targetColor.z);
         }
     }
@@ -268,8 +267,9 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
 
 void render_transformations_test(m4x4 projection, m4x4 view, speg_state *state, speg_platform_api *platformApi)
 {
-    transformation parent;
     m4x4 mvp;
+    m4x4 projection_view = vm_m4x4_mul(projection, view);
+    transformation parent = vm_tranformation_init();
     transformation child = vm_tranformation_init();
     transformation child2 = vm_tranformation_init();
     transformation child3 = vm_tranformation_init();
@@ -280,50 +280,48 @@ void render_transformations_test(m4x4 projection, m4x4 view, speg_state *state, 
     static float rotation = 90.0f;
     rotation += (100.0f * (float)state->dt);
 
-    parent = vm_tranformation_init();
     parent.position.x = 4.0f;
-    /*parent.scale.y = 2.0f;*/
     vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_radf(rotation));
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&parent));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&parent));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.0f, 0.0f);
 
     child.position = vm_v3(3.0f, 0.0f, 0.0f);
     child.parent = &parent;
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child2.position = vm_v3(-3.0f, 0.0f, 0.0f);
     child2.parent = &parent;
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child2));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child2));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child3.position = vm_v3(0.0f, 0.0f, 3.0f);
     child3.parent = &parent;
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child3));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child3));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child4.position = vm_v3(0.0f, 0.0f, -3.0f);
     child4.parent = &parent;
     child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 2.0f));
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child4));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child4));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
 
     child41.position = vm_v3(0.0f, 0.0f, -2.0f);
     child41.parent = &child4;
     child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 4.0f));
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child41));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child41));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 0.0f, 1.0f, 0.0f);
 
     child411.position = vm_v3(0.0f, 0.0f, -2.0f);
     child411.parent = &child41;
 
-    mvp = vm_m4x4_mul(vm_m4x4_mul(projection, view), vm_transformation_matrix(&child411));
+    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child411));
     platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 0.0f, 0.0f, 0.0f);
 }
 
@@ -362,6 +360,7 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
     if (!calculatedPositions)
     {
         int i;
+        int j;
 
         for (i = 0; i < numCubes; ++i)
         {
@@ -379,22 +378,10 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
 
             model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
 
-            models[idx_base + 0] = model.e[0];   /* projection matrix */
-            models[idx_base + 1] = model.e[1];   /* projection matrix */
-            models[idx_base + 2] = model.e[2];   /* projection matrix */
-            models[idx_base + 3] = model.e[3];   /* projection matrix */
-            models[idx_base + 4] = model.e[4];   /* projection matrix */
-            models[idx_base + 5] = model.e[5];   /* projection matrix */
-            models[idx_base + 6] = model.e[6];   /* projection matrix */
-            models[idx_base + 7] = model.e[7];   /* projection matrix */
-            models[idx_base + 8] = model.e[8];   /* projection matrix */
-            models[idx_base + 9] = model.e[9];   /* projection matrix */
-            models[idx_base + 10] = model.e[10]; /* projection matrix */
-            models[idx_base + 11] = model.e[11]; /* projection matrix */
-            models[idx_base + 12] = model.e[12]; /* projection matrix */
-            models[idx_base + 13] = model.e[13]; /* projection matrix */
-            models[idx_base + 14] = model.e[14]; /* projection matrix */
-            models[idx_base + 15] = model.e[15]; /* projection matrix */
+            for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+            {
+                models[idx_base + j] = model.e[j]; /* projection matrix */
+            }
         }
 
         calculatedPositions = true;
