@@ -130,22 +130,6 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     camera_update_vectors(cam);
 }
 
-v3 flyAroundObject(float radius, float counterSpeed, bool clockwise)
-{
-    v3 result = {0};
-
-    /* Fly around the scene with the camera */
-    float sinX = vm_sinf(counterSpeed);
-    float cosZ = vm_cosf(counterSpeed);
-    assert(sinX <= 1.00001f && sinX >= -1.00001f);
-    assert(cosZ <= 1.00001f && cosZ >= -1.00001f);
-    result.x = clockwise ? -(sinX * radius) : (sinX * radius);
-    result.y = 0.0f;
-    result.z = (cosZ * radius);
-
-    return (result);
-}
-
 void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, speg_controller_input *input, speg_platform_api *platformApi, unsigned int numCubes, float range)
 {
     m4x4 projection_view = vm_m4x4_mul(projection, *view);
