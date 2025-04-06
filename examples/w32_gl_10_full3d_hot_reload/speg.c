@@ -225,7 +225,6 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
     v3 axisPosition = vm_v3(0.0f, 0.0f, 0.0f);
 
     m4x4 projection_view = vm_m4x4_mul(projection, view);
-    frustum frustum_planes = vm_frustum_extract_planes(projection_view);
 
     m4x4 axisModel = vm_m4x4_translate(vm_m4x4_identity, axisPosition);
     v3 axisColors[3];   /* X, Y , Z*/
@@ -233,7 +232,6 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
     m4x4 axisModels[3]; /* X, Y , Z*/
 
     int i;
-    int isInFrustum;
 
     axisColors[0] = vm_v3(1.0f, 0.0f, 0.0f);
     axisColors[1] = vm_v3(0.0f, 1.0f, 0.0f);
@@ -249,19 +247,10 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
 
     for (i = 0; i < (int)array_size(axisModels); ++i)
     {
-        isInFrustum = vm_frustum_is_cube_in(frustum_planes, axisPosition, axisSizes[i], 0.15f);
+        m4x4 mvp = vm_m4x4_mul(projection_view, axisModels[i]);
 
-        if (isInFrustum)
-        {
-            m4x4 mvp = vm_m4x4_mul(projection_view, axisModels[i]);
-
-            platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, axisColors[i].x, axisColors[i].y, axisColors[i].z);
-            state->renderedObjects++;
-        }
-        else
-        {
-            state->culledObjects++;
-        }
+        platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, axisColors[i].x, axisColors[i].y, axisColors[i].z);
+        state->renderedObjects++;
     }
 }
 
@@ -345,7 +334,6 @@ typedef struct speg_draw_call
 
 speg_draw_call render_cubes_instanced(speg_state *state, float range)
 {
-    /* TODO: Perform frustum culling when I have a dynamic array list implementation*/
     static bool calculatedPositions = false;
 
 #define NUM_INSTANCED_CUBES 20000
