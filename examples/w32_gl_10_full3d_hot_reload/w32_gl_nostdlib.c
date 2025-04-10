@@ -16,21 +16,6 @@ double w32_type_llu_to_double(w32_type_llu a)
   return ((double)a.high_part * 4294967296.0 + (double)a.low_part);
 }
 
-w32_type_llu w32_type_llu_sub(w32_type_llu a, w32_type_llu b)
-{
-  w32_type_llu result = {0};
-
-  result.low_part = a.low_part - b.low_part;
-  result.high_part = a.high_part - b.high_part;
-
-  if (a.low_part < b.low_part)
-  {
-    result.high_part--;
-  }
-
-  return (result);
-}
-
 unsigned long w32_rdtsc(void)
 {
   w32_type_llu rdtsc_value = {0};

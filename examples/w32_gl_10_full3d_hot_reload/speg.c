@@ -48,7 +48,7 @@ typedef struct camera
 
     float yaw;
     float pitch;
-    float fov; /* = ZOOM Angle*/
+    float fov;
 
 } camera;
 
