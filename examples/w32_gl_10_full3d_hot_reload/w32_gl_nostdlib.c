@@ -229,24 +229,17 @@ void platform_draw_instanced(
     /* Instanced mesh */
     glGenBuffers(1, &mesh->IBO);
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
 
     glBindVertexArray(mesh->VAO);
 
     /* set attribute pointers for matrix (4 times vec4) */
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)0);
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(1 * (sizeof(float) * 4)));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(2 * (sizeof(float) * 4)));
-    glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(3 * (sizeof(float) * 4)));
-
-    glVertexAttribDivisor(2, 1);
-    glVertexAttribDivisor(3, 1);
-    glVertexAttribDivisor(4, 1);
-    glVertexAttribDivisor(5, 1);
+    for (int i = 0; i < 4; ++i)
+    {
+      glEnableVertexAttribArray(2 + i);
+      glVertexAttribPointer(2 + i, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(i * sizeof(float) * 4));
+      glVertexAttribDivisor(2 + i, 1);
+    }
 
     glBindVertexArray(0);
 
@@ -259,28 +252,8 @@ void platform_draw_instanced(
   {
     win32_print_console("[win32] update mesh instanced data, VAO: %i, Last no. objects: %i, New no. objects: %i\n", mesh->VAO, mesh->lastInstancedNumberOfObjects, numberOfObjects);
     /* Instanced mesh */
-    glGenBuffers(1, &mesh->IBO);
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_STATIC_DRAW);
-
-    glBindVertexArray(mesh->VAO);
-
-    /* set attribute pointers for model matricies (4 times vec4) */
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)0);
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(1 * (sizeof(float) * 4)));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(2 * (sizeof(float) * 4)));
-    glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(3 * (sizeof(float) * 4)));
-
-    glVertexAttribDivisor(2, 1);
-    glVertexAttribDivisor(3, 1);
-    glVertexAttribDivisor(4, 1);
-    glVertexAttribDivisor(5, 1);
-
-    glBindVertexArray(0);
+    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
 
     mesh->lastInstancedNumberOfObjects = numberOfObjects;
   }
