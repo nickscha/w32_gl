@@ -437,6 +437,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     platformApi->platform_draw_instanced(call.mesh, call.matrices_count, call.matrices, projection.e, view.e, call.color);
 }
 
+#ifdef _WIN32
 #ifdef __clang__
 #elif __GNUC__
 __attribute((externally_visible))
@@ -449,6 +450,7 @@ DllMainCRTStartup(void)
 {
     return 1;
 }
+#endif
 
 /*
    ------------------------------------------------------------------------------
