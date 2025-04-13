@@ -148,12 +148,12 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
         unsigned int green = (color & 0x0000FF00) >> 8;
         unsigned int blue = (color & 0x000000FF);
 
-        v3 targetPosition = vm_v3(0.0f, 0.0f, 0.0f);
+        v3 targetPosition = vm_v3_zero;
         v3 targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
 
         if (i == 0)
         {
-            targetColor = vm_v3(1.0f, 1.0f, 1.0f);
+            targetColor = vm_v3_one;
         }
         else
         {
@@ -178,7 +178,7 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
         }
 
         /* TODO: epsilon 0.15f is needed because cubes are rotating and its not considered in the frustum check */
-        isInFrustum = vm_frustum_is_cube_in(frustum_planes, targetPosition, vm_v3(1.0f, 1.0f, 1.0f), 0.15f);
+        isInFrustum = vm_frustum_is_cube_in(frustum_planes, targetPosition, vm_v3_one, 0.15f);
 
         draw = (bool)isInFrustum;
 
@@ -222,7 +222,7 @@ void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_
     const float axisLength = 160.0f;
     const float axisThickness = 0.04f;
 
-    v3 axisPosition = vm_v3(0.0f, 0.0f, 0.0f);
+    v3 axisPosition = vm_v3_zero;
 
     m4x4 projection_view = vm_m4x4_mul(projection, view);
 
