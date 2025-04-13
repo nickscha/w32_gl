@@ -194,6 +194,8 @@ void shader_load_all(void)
   shaders.instanced = shader_load("test_instanced.vs", "test.fs");
 }
 
+static unsigned int shader_last_used_program = 0;
+
 void platform_draw_instanced(
     speg_mesh *mesh,
     int numberOfObjects,
@@ -266,6 +268,7 @@ void platform_draw_instanced(
   if (!initialized_gl)
   {
     glUseProgram(shaders.instanced.program);
+    shader_last_used_program = shaders.instanced.program;
     uniformLocationColor = glGetUniformLocation(shaders.instanced.program, "color");
     uniformLocationProjection = glGetUniformLocation(shaders.instanced.program, "projection");
     uniformLocationView = glGetUniformLocation(shaders.instanced.program, "view");
@@ -278,7 +281,12 @@ void platform_draw_instanced(
   }
 
   glBindVertexArray(mesh->VAO);
-  glUseProgram(shaders.instanced.program);
+  if (shader_last_used_program != shaders.instanced.program)
+  {
+    glUseProgram(shaders.instanced.program);
+    shader_last_used_program = shaders.instanced.program;
+  }
+
   glUniformMatrix4fv(uniformLocationProjection, 1, GL_FALSE, uniformProjection);
   glUniformMatrix4fv(uniformLocationView, 1, GL_FALSE, uniformView);
   glUniform3f(uniformLocationColor, uniformColor[0], uniformColor[1], uniformColor[2]);
@@ -332,6 +340,7 @@ void platform_draw(
     glEnableVertexAttribArray(0);
 
     glUseProgram(shaders.normal.program);
+    shader_last_used_program = shaders.normal.program;
     glBindVertexArray(VAO);
     uniformLocationMvp = glGetUniformLocation(shaders.normal.program, "mvp");
     uniformLocationColor = glGetUniformLocation(shaders.normal.program, "color");
@@ -340,7 +349,13 @@ void platform_draw(
   }
 
   glBindVertexArray(VAO);
-  glUseProgram(shaders.normal.program);
+
+  if (shader_last_used_program != shaders.normal.program)
+  {
+    glUseProgram(shaders.normal.program);
+    shader_last_used_program = shaders.normal.program;
+  }
+
   glUniformMatrix4fv(uniformLocationMvp, 1, GL_FALSE, uniformMvp);
   glUniform3f(uniformLocationColor, uniformColorR, uniformColorG, uniformColorB);
   glDrawElements(GL_TRIANGLES, indicesCount, GL_UNSIGNED_INT, 0);
