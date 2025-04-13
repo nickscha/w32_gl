@@ -130,19 +130,133 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     camera_update_vectors(cam);
 }
 
-void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, speg_controller_input *input, speg_platform_api *platformApi, unsigned int numCubes, float range)
+static speg_mesh cube = {
+    false,
+    true, /* Enable face culling */
+    cube_vertices,
+    sizeof(cube_vertices),
+    cube_indices,
+    sizeof(cube_indices),
+    array_size(cube_indices)};
+
+static speg_mesh cube2 = {
+    false,
+    true, /* Enable face culling */
+    cube_vertices,
+    sizeof(cube_vertices),
+    cube_indices,
+    sizeof(cube_indices),
+    array_size(cube_indices)};
+
+static speg_mesh cube3 = {
+    false,
+    true, /* Enable face culling */
+    cube_vertices,
+    sizeof(cube_vertices),
+    cube_indices,
+    sizeof(cube_indices),
+    array_size(cube_indices)};
+
+static speg_mesh cube4 = {
+    false,
+    true, /* Enable face culling */
+    cube_vertices,
+    sizeof(cube_vertices),
+    cube_indices,
+    sizeof(cube_indices),
+    array_size(cube_indices)};
+
+typedef struct speg_draw_call
 {
+    speg_mesh *mesh;
+    float *matrices;
+    int matrices_count;
+    float *colors;
+
+} speg_draw_call;
+
+/* Render X, Y, Z axis lines (we use cubes but scaled in length and reduced in thichness)*/
+speg_draw_call render_coordinate_axis(speg_state *state)
+{
+    speg_draw_call call = {0};
+
+    const float axisLength = 160.0f;
+    const float axisThickness = 0.04f;
+
+    v3 axisPosition = vm_v3_zero;
+    m4x4 axisModel = vm_m4x4_translate(vm_m4x4_identity, axisPosition);
+    v3 axisColors[3];   /* X, Y , Z*/
+    v3 axisSizes[3];    /* X, Y , Z*/
+    m4x4 axisModels[3]; /* X, Y , Z*/
+
+    static float models[3 * VM_M4X4_ELEMENT_COUNT];
+    static float colors[3 * VM_V3_ELEMENT_COUNT];
+
+    int i;
+    int j;
+
+    axisColors[0] = vm_v3(1.0f, 0.0f, 0.0f);
+    axisColors[1] = vm_v3(0.0f, 1.0f, 0.0f);
+    axisColors[2] = vm_v3(0.0f, 0.0f, 1.0f);
+
+    axisSizes[0] = vm_v3(axisLength, axisThickness, axisThickness);
+    axisSizes[1] = vm_v3(axisThickness, axisLength, axisThickness);
+    axisSizes[2] = vm_v3(axisThickness, axisThickness, axisLength);
+
+    axisModels[0] = vm_m4x4_scale(axisModel, axisSizes[0]);
+    axisModels[1] = vm_m4x4_scale(axisModel, axisSizes[1]);
+    axisModels[2] = vm_m4x4_scale(axisModel, axisSizes[2]);
+
+    for (i = 0; i < (int)array_size(axisModels); ++i)
+    {
+        int idx_base = (i * VM_M4X4_ELEMENT_COUNT);
+        int idx_base_color = (i * VM_V3_ELEMENT_COUNT);
+
+        for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+        {
+            models[idx_base + j] = axisModels[i].e[j]; /* model matrix */
+        }
+
+        colors[idx_base_color + 0] = axisColors[i].x; /* R */
+        colors[idx_base_color + 1] = axisColors[i].y; /* G */
+        colors[idx_base_color + 2] = axisColors[i].z; /* B */
+    }
+
+    call.mesh = &cube;
+    call.matrices = models;
+    call.colors = colors;
+    call.matrices_count = (int)array_size(axisModels);
+
+    state->renderedObjects += (int)array_size(axisModels);
+
+    return (call);
+}
+
+speg_draw_call render_cubes(m4x4 projection, m4x4 *view, speg_state *state, speg_controller_input *input, float range)
+{
+    speg_draw_call call = {0};
+
+#define NUM_INSTANCED_FRUST_CUBES 1000
+    static int numCubes = NUM_INSTANCED_FRUST_CUBES;
+    static float models[NUM_INSTANCED_FRUST_CUBES * VM_M4X4_ELEMENT_COUNT];
+    static float colors[NUM_INSTANCED_FRUST_CUBES * VM_V3_ELEMENT_COUNT];
+
     m4x4 projection_view = vm_m4x4_mul(projection, *view);
     frustum frustum_planes = vm_frustum_extract_planes(projection_view);
-    unsigned int i;
+    int i;
+    int j;
     m4x4 model;
     bool draw;
     int isInFrustum;
+    int c = 0;
 
     vm_seed_lcg = 12345;
 
     for (i = 0; i < numCubes; ++i)
     {
+        int idx_base = (c * VM_M4X4_ELEMENT_COUNT);
+        int idx_base_color = (c * VM_V3_ELEMENT_COUNT);
+
         unsigned int color = (i == 0 ? 1 : i) * 10000000;
         unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
         unsigned int green = (color & 0x0000FF00) >> 8;
@@ -182,14 +296,6 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
 
         draw = (bool)isInFrustum;
 
-        if (input->cameraSimulate.endedDown)
-        {
-            /* We set the camera position a bit back in order to see the discarded frustum culling objects (red) in the actual view */
-            v3 simulatedCamPos = cam->position;
-            simulatedCamPos.z += 10.0f;
-            *view = vm_m4x4_lookAt(simulatedCamPos, vm_v3_add(simulatedCamPos, cam->front), cam->up);
-        }
-
         if (isInFrustum)
         {
             /* DRAW */
@@ -209,128 +315,26 @@ void render_cubes(m4x4 projection, m4x4 *view, camera *cam, speg_state *state, s
         /* Finally draw to screen by using platform api */
         if (draw)
         {
-            m4x4 mvp = vm_m4x4_mul(vm_m4x4_mul(projection, *view), model);
-            platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, targetColor.x, targetColor.y, targetColor.z);
+            for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+            {
+                models[idx_base + j] = model.e[j]; /* model matrix */
+            }
+
+            colors[idx_base_color + 0] = targetColor.x; /* R */
+            colors[idx_base_color + 1] = targetColor.y; /* G */
+            colors[idx_base_color + 2] = targetColor.z; /* B */
+
+            c++;
         }
     }
+
+    call.mesh = &cube2;
+    call.matrices = models;
+    call.colors = colors;
+    call.matrices_count = c;
+
+    return (call);
 }
-
-/* Render X, Y, Z axis lines (we use cubes but scaled in length and reduced in thichness)*/
-void render_coordinate_axis(m4x4 projection, m4x4 view, speg_state *state, speg_platform_api *platformApi)
-{
-
-    const float axisLength = 160.0f;
-    const float axisThickness = 0.04f;
-
-    v3 axisPosition = vm_v3_zero;
-
-    m4x4 projection_view = vm_m4x4_mul(projection, view);
-
-    m4x4 axisModel = vm_m4x4_translate(vm_m4x4_identity, axisPosition);
-    v3 axisColors[3];   /* X, Y , Z*/
-    v3 axisSizes[3];    /* X, Y , Z*/
-    m4x4 axisModels[3]; /* X, Y , Z*/
-
-    int i;
-
-    axisColors[0] = vm_v3(1.0f, 0.0f, 0.0f);
-    axisColors[1] = vm_v3(0.0f, 1.0f, 0.0f);
-    axisColors[2] = vm_v3(0.0f, 0.0f, 1.0f);
-
-    axisSizes[0] = vm_v3(axisLength, axisThickness, axisThickness);
-    axisSizes[1] = vm_v3(axisThickness, axisLength, axisThickness);
-    axisSizes[2] = vm_v3(axisThickness, axisThickness, axisLength);
-
-    axisModels[0] = vm_m4x4_scale(axisModel, axisSizes[0]);
-    axisModels[1] = vm_m4x4_scale(axisModel, axisSizes[1]);
-    axisModels[2] = vm_m4x4_scale(axisModel, axisSizes[2]);
-
-    for (i = 0; i < (int)array_size(axisModels); ++i)
-    {
-        m4x4 mvp = vm_m4x4_mul(projection_view, axisModels[i]);
-
-        platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, axisColors[i].x, axisColors[i].y, axisColors[i].z);
-        state->renderedObjects++;
-    }
-}
-
-void render_transformations_test(m4x4 projection, m4x4 view, speg_state *state, speg_platform_api *platformApi)
-{
-    m4x4 mvp;
-    m4x4 projection_view = vm_m4x4_mul(projection, view);
-    transformation parent = vm_tranformation_init();
-    transformation child = vm_tranformation_init();
-    transformation child2 = vm_tranformation_init();
-    transformation child3 = vm_tranformation_init();
-    transformation child4 = vm_tranformation_init();
-    transformation child41 = vm_tranformation_init();
-    transformation child411 = vm_tranformation_init();
-
-    static float rotation = 90.0f;
-    rotation += (100.0f * (float)state->dt);
-
-    parent.position.x = 4.0f;
-    vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_radf(rotation));
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&parent));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.0f, 0.0f);
-
-    child.position = vm_v3(3.0f, 0.0f, 0.0f);
-    child.parent = &parent;
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
-
-    child2.position = vm_v3(-3.0f, 0.0f, 0.0f);
-    child2.parent = &parent;
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child2));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
-
-    child3.position = vm_v3(0.0f, 0.0f, 3.0f);
-    child3.parent = &parent;
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child3));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
-
-    child4.position = vm_v3(0.0f, 0.0f, -3.0f);
-    child4.parent = &parent;
-    child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 2.0f));
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child4));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 1.0f, 0.8745f, 0.0f);
-
-    child41.position = vm_v3(0.0f, 0.0f, -2.0f);
-    child41.parent = &child4;
-    child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 4.0f));
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child41));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 0.0f, 1.0f, 0.0f);
-
-    child411.position = vm_v3(0.0f, 0.0f, -2.0f);
-    child411.parent = &child41;
-
-    mvp = vm_m4x4_mul(projection_view, vm_transformation_matrix(&child411));
-    platformApi->platform_draw(cube_vertices, cube_indices, sizeof(cube_vertices), sizeof(cube_indices), array_size(cube_indices), mvp.e, 0.0f, 0.0f, 0.0f);
-}
-
-static speg_mesh cube = {
-    false,
-    true, /* Enable face culling */
-    cube_vertices,
-    sizeof(cube_vertices),
-    cube_indices,
-    sizeof(cube_indices),
-    array_size(cube_indices)};
-
-typedef struct speg_draw_call
-{
-    speg_mesh *mesh;
-    float *matrices;
-    int matrices_count;
-    float color[3];
-
-} speg_draw_call;
 
 speg_draw_call render_cubes_instanced(speg_state *state, float range)
 {
@@ -338,8 +342,8 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
 
 #define NUM_INSTANCED_CUBES 20000
     static int numCubes = NUM_INSTANCED_CUBES;
-    static float models[VM_M4X4_ELEMENT_COUNT * NUM_INSTANCED_CUBES];
-    static float color[3] = {0.8f, 0.8f, 0.8f};
+    static float models[NUM_INSTANCED_CUBES * VM_M4X4_ELEMENT_COUNT];
+    static float colors[NUM_INSTANCED_CUBES * VM_V3_ELEMENT_COUNT];
 
     m4x4 model;
 
@@ -354,6 +358,14 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
         {
             v3 targetPosition = vm_v3_zero;
             int idx_base = (i * VM_M4X4_ELEMENT_COUNT);
+            int idx_base_color = (i * VM_V3_ELEMENT_COUNT);
+
+            unsigned int color = (i == 0 ? 1 : i) * 10000000;
+            unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
+            unsigned int green = (color & 0x0000FF00) >> 8;
+            unsigned int blue = (color & 0x000000FF);
+
+            v3 targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
 
             if (i > 0)
             {
@@ -368,23 +380,137 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
 
             for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
             {
-                models[idx_base + j] = model.e[j]; /* projection matrix */
+                models[idx_base + j] = model.e[j]; /* model matrix */
             }
+
+            colors[idx_base_color + 0] = targetColor.x; /* R */
+            colors[idx_base_color + 1] = targetColor.y; /* G */
+            colors[idx_base_color + 2] = targetColor.z; /* B */
         }
 
         calculatedPositions = true;
     }
 
-    call.mesh = &cube;
+    call.mesh = &cube3;
     call.matrices = models;
+    call.colors = colors;
     call.matrices_count = numCubes;
-    call.color[0] = color[0];
-    call.color[1] = color[1];
-    call.color[2] = color[2];
 
     state->renderedObjects += numCubes;
 
-    return call;
+    return (call);
+}
+
+speg_draw_call render_transformations_test(speg_state *state)
+{
+
+    speg_draw_call call = {0};
+
+    static float models[7 * VM_M4X4_ELEMENT_COUNT];
+    static float colors[7 * VM_V3_ELEMENT_COUNT];
+
+    transformation parent = vm_tranformation_init();
+    transformation child = vm_tranformation_init();
+    transformation child2 = vm_tranformation_init();
+    transformation child3 = vm_tranformation_init();
+    transformation child4 = vm_tranformation_init();
+    transformation child41 = vm_tranformation_init();
+    transformation child411 = vm_tranformation_init();
+
+    int j = 0;
+
+    m4x4 current_transform;
+
+    static float rotation = 90.0f;
+    rotation += (100.0f * (float)state->dt);
+
+    parent.position.x = 4.0f;
+    vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_radf(rotation));
+    current_transform = vm_transformation_matrix(&parent);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(0 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(0 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
+    colors[(0 * VM_V3_ELEMENT_COUNT) + 1] = 0.0f;
+    colors[(0 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    child.position = vm_v3(3.0f, 0.0f, 0.0f);
+    child.parent = &parent;
+    current_transform = vm_transformation_matrix(&child);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(1 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(1 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
+    colors[(1 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
+    colors[(1 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    child2.position = vm_v3(-3.0f, 0.0f, 0.0f);
+    child2.parent = &parent;
+    current_transform = vm_transformation_matrix(&child2);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(2 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(2 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
+    colors[(2 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
+    colors[(2 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    child3.position = vm_v3(0.0f, 0.0f, 3.0f);
+    child3.parent = &parent;
+    current_transform = vm_transformation_matrix(&child3);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(3 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(3 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
+    colors[(3 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
+    colors[(3 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    child4.position = vm_v3(0.0f, 0.0f, -3.0f);
+    child4.parent = &parent;
+    child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 2.0f));
+    current_transform = vm_transformation_matrix(&child4);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(4 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(4 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
+    colors[(4 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
+    colors[(4 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    child41.position = vm_v3(0.0f, 0.0f, -2.0f);
+    child41.parent = &child4;
+    child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 4.0f));
+    current_transform = vm_transformation_matrix(&child41);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(5 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(5 * VM_V3_ELEMENT_COUNT) + 0] = 0.0f;
+    colors[(5 * VM_V3_ELEMENT_COUNT) + 1] = 1.0f;
+    colors[(5 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    child411.position = vm_v3(0.0f, 0.0f, -2.0f);
+    child411.parent = &child41;
+    current_transform = vm_transformation_matrix(&child411);
+    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
+    {
+        models[(6 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
+    }
+    colors[(6 * VM_V3_ELEMENT_COUNT) + 0] = 0.0f;
+    colors[(6 * VM_V3_ELEMENT_COUNT) + 1] = 0.0f;
+    colors[(6 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+
+    call.mesh = &cube4;
+    call.matrices = models;
+    call.colors = colors;
+    call.matrices_count = 7;
+
+    state->renderedObjects += 7;
+
+    return (call);
 }
 
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
@@ -395,7 +521,11 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     unsigned long endCycleCount;
     m4x4 projection;
     m4x4 view;
+    m4x4 view_simulated;
     speg_draw_call call;
+    speg_draw_call call2;
+    speg_draw_call call3;
+    speg_draw_call call4;
 
     assert(memory);
     assert(memory->permanentMemorySize > 0);
@@ -428,13 +558,29 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     projection = vm_m4x4_perspective(vm_radf(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
 
-    render_cubes(projection, &view, &cam, state, input, platformApi, 1000, 20.0f);
-    render_transformations_test(projection, view, state, platformApi);
-    render_coordinate_axis(projection, view, state, platformApi);
+    if (input->cameraSimulate.endedDown)
+    {
+        /* We set the camera position a bit back in order to see the discarded frustum culling objects (red) in the actual view */
+        v3 simulatedCamPos = cam.position;
+        simulatedCamPos.z += 10.0f;
 
-    call = render_cubes_instanced(state, 100.0f);
+        view_simulated = view;
+        view = vm_m4x4_lookAt(simulatedCamPos, vm_v3_add(simulatedCamPos, cam.front), cam.up);
+    }
+    else
+    {
+        view_simulated = view;
+    }
 
-    platformApi->platform_draw_instanced(call.mesh, call.matrices_count, call.matrices, projection.e, view.e, call.color);
+    call = render_coordinate_axis(state);
+    call2 = render_cubes_instanced(state, 100.0f);
+    call3 = render_cubes(projection, &view_simulated, state, input, 20.0f);
+    call4 = render_transformations_test(state);
+
+    platformApi->platform_draw(call.mesh, call.matrices_count, false, call.matrices, call.colors, projection.e, view.e);
+    platformApi->platform_draw(call2.mesh, call2.matrices_count, false, call2.matrices, call2.colors, projection.e, view.e);
+    platformApi->platform_draw(call3.mesh, call3.matrices_count, true, call3.matrices, call3.colors, projection.e, view.e);
+    platformApi->platform_draw(call4.mesh, call4.matrices_count, true, call4.matrices, call4.colors, projection.e, view.e);
 }
 
 #ifdef _WIN32

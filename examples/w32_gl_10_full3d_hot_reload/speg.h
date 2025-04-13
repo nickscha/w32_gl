@@ -63,6 +63,8 @@ typedef struct speg_mesh
     unsigned int VBO;
     unsigned int EBO;
     unsigned int IBO;
+    unsigned int CBO;
+
     int lastInstancedNumberOfObjects;
 
 } speg_mesh;
@@ -72,8 +74,7 @@ typedef struct speg_mesh
 /*****************************/
 typedef void (*func_speg_platform_print_console)(const char *file, const int line, char *formatString, ...);
 typedef void (*func_speg_platform_sleep)(unsigned long milliseconds);
-typedef void (*func_speg_platform_draw)(float vertices[], unsigned int indices[], signed long verticesSize, signed long indicesSize, int indicesCount, float uniformMvp[16], float uniformColorR, float uniformColorG, float uniformColorB);
-typedef void (*func_platform_draw_instanced)(speg_mesh *mesh, int numberOfObjects, float models[], float uniformProjection[16], float uniformView[16], float uniformColor[3]);
+typedef void (*func_speg_platform_draw)(speg_mesh *mesh, int numberOfObjects, int changed, float models[], float colors[], float uniformProjection[16], float uniformView[16]);
 typedef unsigned long (*func_speg_platform_perf_current_cycle_count)(void);
 
 typedef struct speg_platform_api
@@ -82,7 +83,6 @@ typedef struct speg_platform_api
     func_speg_platform_print_console platform_print_console;
     func_speg_platform_sleep platform_sleep;
     func_speg_platform_draw platform_draw;
-    func_platform_draw_instanced platform_draw_instanced;
 
     /* Performance & Debugging Metrics */
     func_speg_platform_perf_current_cycle_count platform_perf_current_cycle_count;

@@ -113,7 +113,6 @@ typedef struct speg_shader
 typedef struct speg_shaders
 {
 
-  speg_shader normal;
   speg_shader instanced;
 
 } speg_shaders;
@@ -190,21 +189,26 @@ speg_shader shader_load(char *vertexShaderFile, char *fragmentShaderFile)
 
 void shader_load_all(void)
 {
-  shaders.normal = shader_load("test.vs", "test.fs");
-  shaders.instanced = shader_load("test_instanced.vs", "test.fs");
+  shaders.instanced = shader_load("test_instanced.vs", "test_instanced.fs");
 }
 
 static unsigned int shader_last_used_program = 0;
+static const int sizeVec3 = sizeof(float) * 3;
+static const int sizeM4x4 = sizeof(float) * 16;
 
-void platform_draw_instanced(
+void platform_draw(
     speg_mesh *mesh,
     int numberOfObjects,
+    int changed,
     float models[],
+    float colors[],
     float uniformProjection[16],
-    float uniformView[16],
-    float uniformColor[3])
+    float uniformView[16])
 {
-  const int sizeM4x4 = sizeof(float) * 16;
+  if (numberOfObjects == 0)
+  {
+    return;
+  }
 
   if (!mesh->initialized)
   {
@@ -212,6 +216,7 @@ void platform_draw_instanced(
     glGenBuffers(1, &mesh->VBO);
     glGenBuffers(1, &mesh->EBO);
     glGenBuffers(1, &mesh->IBO);
+    glGenBuffers(1, &mesh->CBO);
 
     glBindVertexArray(mesh->VAO);
 
@@ -239,6 +244,13 @@ void platform_draw_instanced(
       glVertexAttribDivisor(2 + i, 1);
     }
 
+    /* Instance color attribute (layout = 6) */
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
+    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(6);
+    glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeVec3, (void *)0);
+    glVertexAttribDivisor(6, 1);
+
     glBindVertexArray(0);
 
     mesh->lastInstancedNumberOfObjects = numberOfObjects;
@@ -246,18 +258,22 @@ void platform_draw_instanced(
   }
 
   /* Mesh changed */
-  if (mesh->lastInstancedNumberOfObjects != numberOfObjects)
+  if (mesh->lastInstancedNumberOfObjects != numberOfObjects || changed)
   {
+    /*
     win32_print_console("[win32] update mesh instanced data, VAO: %i, Last no. objects: %i, New no. objects: %i\n", mesh->VAO, mesh->lastInstancedNumberOfObjects, numberOfObjects);
+    */
     /* Instanced mesh */
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
     glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
+    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], GL_DYNAMIC_DRAW);
 
     mesh->lastInstancedNumberOfObjects = numberOfObjects;
   }
 
   static bool initialized_gl = false;
-  static GLint uniformLocationColor = -1;
   static GLint uniformLocationProjection = -1;
   static GLint uniformLocationView = -1;
 
@@ -265,7 +281,6 @@ void platform_draw_instanced(
   {
     glUseProgram(shaders.instanced.program);
     shader_last_used_program = shaders.instanced.program;
-    uniformLocationColor = glGetUniformLocation(shaders.instanced.program, "color");
     uniformLocationProjection = glGetUniformLocation(shaders.instanced.program, "projection");
     uniformLocationView = glGetUniformLocation(shaders.instanced.program, "view");
     initialized_gl = true;
@@ -276,16 +291,15 @@ void platform_draw_instanced(
     glDisable(GL_CULL_FACE);
   }
 
-  glBindVertexArray(mesh->VAO);
   if (shader_last_used_program != shaders.instanced.program)
   {
     glUseProgram(shaders.instanced.program);
     shader_last_used_program = shaders.instanced.program;
   }
 
+  glBindVertexArray(mesh->VAO);
   glUniformMatrix4fv(uniformLocationProjection, 1, GL_FALSE, uniformProjection);
   glUniformMatrix4fv(uniformLocationView, 1, GL_FALSE, uniformView);
-  glUniform3f(uniformLocationColor, uniformColor[0], uniformColor[1], uniformColor[2]);
   glDrawElementsInstanced(GL_TRIANGLES, mesh->indicesCount, GL_UNSIGNED_INT, 0, numberOfObjects);
   glBindVertexArray(0);
 
@@ -293,69 +307,6 @@ void platform_draw_instanced(
   {
     glEnable(GL_CULL_FACE);
   }
-
-  drawCallsPerFrame++;
-}
-
-void platform_draw(
-    float vertices[],
-    unsigned int indices[],
-    signed long verticesSize,
-    signed long indicesSize,
-    int indicesCount,
-    float uniformMvp[16],
-    float uniformColorR,
-    float uniformColorG,
-    float uniformColorB)
-{
-
-  static bool initialized_gl = false;
-  static unsigned int VBO, VAO, EBO;
-
-  static GLint uniformLocationMvp = -1;
-  static GLint uniformLocationColor = -1;
-
-  if (!initialized_gl)
-  {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    /* Vertices */
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
-
-    /* Incides */
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSize, indices, GL_STATIC_DRAW);
-
-    /* position layout location = 0 */
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(vertices[0]), (void *)0);
-    glEnableVertexAttribArray(0);
-
-    glUseProgram(shaders.normal.program);
-    shader_last_used_program = shaders.normal.program;
-    glBindVertexArray(VAO);
-    uniformLocationMvp = glGetUniformLocation(shaders.normal.program, "mvp");
-    uniformLocationColor = glGetUniformLocation(shaders.normal.program, "color");
-
-    initialized_gl = true;
-  }
-
-  glBindVertexArray(VAO);
-
-  if (shader_last_used_program != shaders.normal.program)
-  {
-    glUseProgram(shaders.normal.program);
-    shader_last_used_program = shaders.normal.program;
-  }
-
-  glUniformMatrix4fv(uniformLocationMvp, 1, GL_FALSE, uniformMvp);
-  glUniform3f(uniformLocationColor, uniformColorR, uniformColorG, uniformColorB);
-  glDrawElements(GL_TRIANGLES, indicesCount, GL_UNSIGNED_INT, 0);
-  glBindVertexArray(0);
 
   drawCallsPerFrame++;
 }
@@ -907,7 +858,6 @@ mainCRTStartup(void)
 
   speg_platform_api platformApi = {0};
   platformApi.platform_draw = platform_draw;
-  platformApi.platform_draw_instanced = platform_draw_instanced;
   platformApi.platform_print_console = platform_print_console;
   platformApi.platform_sleep = Sleep;
   platformApi.platform_perf_current_cycle_count = w32_rdtsc;
@@ -938,12 +888,10 @@ mainCRTStartup(void)
     }
 
     FILETIME vs = w32_file_mod_time(shaders.instanced.vsFile);
-    FILETIME fs = w32_file_mod_time(shaders.normal.fsFile);
 
-    if (CompareFileTime(&vs, &shaders.instanced.vsTime) != 0 || CompareFileTime(&fs, &shaders.normal.fsTime) != 0)
+    if (CompareFileTime(&vs, &shaders.instanced.vsTime) != 0)
     {
       win32_print_console("%s", "[win32] hot reload shader files\n");
-      glDeleteProgram(shaders.normal.program);
       glDeleteProgram(shaders.instanced.program);
       shader_load_all();
     }
