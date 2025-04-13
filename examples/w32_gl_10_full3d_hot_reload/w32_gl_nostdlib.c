@@ -211,6 +211,7 @@ void platform_draw_instanced(
     glGenVertexArrays(1, &mesh->VAO);
     glGenBuffers(1, &mesh->VBO);
     glGenBuffers(1, &mesh->EBO);
+    glGenBuffers(1, &mesh->IBO);
 
     glBindVertexArray(mesh->VAO);
 
@@ -226,16 +227,11 @@ void platform_draw_instanced(
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(mesh->vertices[0]), (void *)0);
     glEnableVertexAttribArray(0);
 
-    glBindVertexArray(0);
-
     /* Instanced mesh */
-    glGenBuffers(1, &mesh->IBO);
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
     glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
 
-    glBindVertexArray(mesh->VAO);
-
-    /* set attribute pointers for matrix (4 times vec4) */
+    /* set attribute pointers 2 - 5 for matrix (4 times vec4) */
     for (int i = 0; i < 4; ++i)
     {
       glEnableVertexAttribArray(2 + i);
