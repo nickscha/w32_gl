@@ -94,11 +94,11 @@ File w32_read_entire_file(const char *path)
   return tmp;
 }
 
+static const FILETIME empty = {0, 0};
 FILETIME w32_file_mod_time(const char *file)
 {
   WIN32_FILE_ATTRIBUTE_DATA fad;
-  GetFileAttributesExA(file, GetFileExInfoStandard, &fad);
-  return fad.ftLastWriteTime;
+  return GetFileAttributesExA(file, GetFileExInfoStandard, &fad) ? fad.ftLastWriteTime : empty;
 }
 
 typedef struct speg_shader
@@ -408,22 +408,26 @@ void loadCode(void)
 
   if (code.hDLL != NULL)
   {
-    FreeLibrary(code.hDLL);
-    code.hDLL = 0;
+    if (!FreeLibrary(code.hDLL))
+    {
+      win32_print_console("[win32] cannot free library: %s\n", dllTempName);
+    }
+    code.hDLL = NULL;
   }
 
-  CopyFileA(dllName, dllTempName, false);
+  if (!CopyFileA(dllName, dllTempName, false))
+  {
+    win32_print_console("[win32] cannot copy file: %s -> %s\n", dllName, dllTempName);
+  }
 
   code.hDLL = LoadLibraryA(dllTempName);
   code.dllName = dllName;
+  code.lastWriteTime = w32_file_mod_time(dllName);
 
   if (!code.hDLL)
   {
     return;
   }
-
-  code.lastWriteTime = w32_file_mod_time(dllName);
-  assert(code.hDLL);
 
   /* FIX for ERROR: ISO C forbids conversion of object pointer to function pointer type*/
   /* https://pubs.opengroup.org/onlinepubs/009695399/functions/dlsym.html */
@@ -944,12 +948,9 @@ mainCRTStartup(void)
 
     if (CompareFileTime(&ddlFtCurrent, &code.lastWriteTime) != 0)
     {
-      win32_printf("[hot] reload code dll\n");
+      win32_print_console("%s", "[win32] hot reload code dll\n");
       loadCode();
-      if (!code.hDLL)
-      {
-        code.lastWriteTime = ddlFtCurrent;
-      }
+      memory.initialized = false;
     }
 
     FILETIME vs = w32_file_mod_time(shaders.instanced.vsFile);
@@ -957,7 +958,7 @@ mainCRTStartup(void)
 
     if (CompareFileTime(&vs, &shaders.instanced.vsTime) != 0 || CompareFileTime(&fs, &shaders.normal.fsTime) != 0)
     {
-      win32_printf("[hot] reload shader files\n");
+      win32_print_console("%s", "[win32] hot reload shader files\n");
       glDeleteProgram(shaders.normal.program);
       glDeleteProgram(shaders.instanced.program);
       shader_load_all();
