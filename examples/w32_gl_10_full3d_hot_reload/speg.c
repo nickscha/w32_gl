@@ -148,16 +148,6 @@ static speg_mesh cube_dynamic = {
     sizeof(cube_indices),
     array_size(cube_indices)};
 
-typedef struct speg_draw_call
-{
-    speg_mesh *mesh;
-    float *models;
-    float *colors;
-    int count_instances;
-    int count_instances_max;
-
-} speg_draw_call;
-
 void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color)
 {
     int m_offset = call->count_instances * VM_M4X4_ELEMENT_COUNT;
@@ -428,6 +418,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         draw_call_static.count_instances = 0;
         draw_call_static.models = all_static_models;
         draw_call_static.colors = all_static_colors;
+        draw_call_static.changed = false;
 
         /* Static scenes */
         render_coordinate_axis(&draw_call_static);
@@ -465,6 +456,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     draw_call_dynamic.count_instances = 0;
     draw_call_dynamic.models = all_dynamic_models;
     draw_call_dynamic.colors = all_dynamic_colors;
+    draw_call_dynamic.changed = true;
 
     /* Dynamic scenes */
     render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f);
@@ -473,8 +465,8 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     state->renderedObjects = draw_call_static.count_instances + draw_call_dynamic.count_instances;
 
     /* Draw static and dynamic scenes*/
-    platformApi->platform_draw(draw_call_static.mesh, draw_call_static.count_instances, false, draw_call_static.models, draw_call_static.colors, projection_view.e);
-    platformApi->platform_draw(draw_call_dynamic.mesh, draw_call_dynamic.count_instances, true, draw_call_dynamic.models, draw_call_dynamic.colors, projection_view.e);
+    platformApi->platform_draw(&draw_call_static, projection_view.e);
+    platformApi->platform_draw(&draw_call_dynamic, projection_view.e);
 }
 
 #ifdef _WIN32

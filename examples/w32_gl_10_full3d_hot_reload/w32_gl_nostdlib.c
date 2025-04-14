@@ -195,18 +195,14 @@ void shader_load_all(void)
 static const int sizeVec3 = sizeof(float) * 3;
 static const int sizeM4x4 = sizeof(float) * 16;
 
-void platform_draw(
-    speg_mesh *mesh,
-    int numberOfObjects,
-    int changed,
-    float models[],
-    float colors[],
-    float uniformProjectionView[16])
+void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
 {
-  if (numberOfObjects == 0)
+  if (draw_call->count_instances == 0)
   {
     return;
   }
+
+  speg_mesh *mesh = draw_call->mesh;
 
   if (!mesh->initialized)
   {
@@ -232,7 +228,7 @@ void platform_draw(
 
     /* Instanced mesh */
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeM4x4, &draw_call->models[0], draw_call->changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 
     /* set attribute pointers 2 - 5 for matrix (4 times vec4) */
     for (int i = 0; i < 4; ++i)
@@ -244,7 +240,7 @@ void platform_draw(
 
     /* Instance color attribute (layout = 6) */
     glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeVec3, &draw_call->colors[0], draw_call->changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     glEnableVertexAttribArray(6);
     glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeVec3, (void *)0);
     glVertexAttribDivisor(6, 1);
@@ -253,17 +249,17 @@ void platform_draw(
 
     mesh->initialized = true;
 
-    win32_print_console("[win32] mesh initialized, vao: %i, vbo: %i, ebo: %i, ibo: %i, cbo: %i, face_culling: %s, dynamic: %s\n", mesh->VAO, mesh->VBO, mesh->EBO, mesh->IBO, mesh->CBO, mesh->faceCulling ? "true" : "false", changed ? "true" : "false");
+    win32_print_console("[win32] mesh initialized, vao: %i, vbo: %i, ebo: %i, ibo: %i, cbo: %i, face_culling: %s, dynamic: %s\n", mesh->VAO, mesh->VBO, mesh->EBO, mesh->IBO, mesh->CBO, mesh->faceCulling ? "true" : "false", draw_call->changed ? "true" : "false");
   }
 
   /* Mesh changed */
-  if (changed)
+  if (draw_call->changed)
   {
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeM4x4, &draw_call->models[0], GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeVec3, &draw_call->colors[0], GL_DYNAMIC_DRAW);
   }
 
   static bool initialized_gl = false;
@@ -283,7 +279,7 @@ void platform_draw(
 
   glBindVertexArray(mesh->VAO);
   glUniformMatrix4fv(uniformLocationProjectionView, 1, GL_FALSE, uniformProjectionView);
-  glDrawElementsInstanced(GL_TRIANGLES, mesh->indicesCount, GL_UNSIGNED_INT, 0, numberOfObjects);
+  glDrawElementsInstanced(GL_TRIANGLES, mesh->indicesCount, GL_UNSIGNED_INT, 0, draw_call->count_instances);
   glBindVertexArray(0);
 
   if (!mesh->faceCulling)
