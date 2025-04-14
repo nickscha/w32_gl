@@ -120,6 +120,7 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
         const float mouseSensitivity = 0.1f;
         cam->yaw += vm_minf(input->mouseXOffset * mouseSensitivity, 89.0f);
         cam->pitch -= vm_maxf(input->mouseYOffset * mouseSensitivity, -89.0f);
+        cam->pitch = vm_clampf(cam->pitch, -89.0f, 89.0f);
     }
 
     if (input->mouseScrollOffset != 0.0f)
@@ -152,6 +153,7 @@ void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color)
 {
     int m_offset = call->count_instances * VM_M4X4_ELEMENT_COUNT;
     int c_offset = call->count_instances * VM_V3_ELEMENT_COUNT;
+
     int i;
 
     assert(call->count_instances + 1 < call->count_instances_max);
@@ -235,13 +237,9 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
         }
         else
         {
-            float xPos = vm_randf_range(rangeMin, rangeMax);
-            float yPos = vm_randf_range(rangeMin, rangeMax);
-            float zPos = vm_randf_range(rangeMin, rangeMax);
-
-            targetPosition.x = xPos;
-            targetPosition.y = yPos;
-            targetPosition.z = zPos;
+            targetPosition.x = vm_randf_range(rangeMin, rangeMax);
+            targetPosition.y = vm_randf_range(rangeMin, rangeMax);
+            targetPosition.z = vm_randf_range(rangeMin, rangeMax);
         }
 
         /* TODO: epsilon 0.15f is needed because cubes are rotating and its not considered in the frustum check */
@@ -275,12 +273,16 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
     }
 }
 
+#define NUM_INSTANCED_CUBES 20000
+static int numCubes = NUM_INSTANCED_CUBES;
+
 void render_cubes_instanced(speg_draw_call *call, float range)
 {
 
-#define NUM_INSTANCED_CUBES 20000
-    static int numCubes = NUM_INSTANCED_CUBES;
     int i;
+    const float color_scale = 1.0f / 255.0f;
+    const float rangeMin = -range;
+    const float rangeMax = range;
 
     for (i = 0; i < numCubes; ++i)
     {
@@ -288,19 +290,17 @@ void render_cubes_instanced(speg_draw_call *call, float range)
         v3 targetPosition = vm_v3_zero;
         v3 targetColor = vm_v3_one;
 
-        unsigned int color = (i == 0 ? 1 : i) * 10000000;
-        unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
-        unsigned int green = (color & 0x0000FF00) >> 8;
-        unsigned int blue = (color & 0x000000FF);
-
         if (i > 0)
         {
-            float rangeMin = -range;
-            float rangeMax = range;
+            unsigned int color = (i == 0 ? 1 : i) * 10000000;
+            float r = ((float)(((color >> 16) & 0xFF) >> 1)) * color_scale;
+            float g = ((float)((color >> 8) & 0xFF)) * color_scale;
+            float b = ((float)(color & 0xFF)) * color_scale;
+
             targetPosition.x = vm_randf_range(rangeMin, rangeMax);
             targetPosition.y = vm_randf_range(rangeMin, rangeMax);
             targetPosition.z = vm_randf_range(rangeMin, rangeMax);
-            targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
+            targetColor = vm_v3(r, g, b);
         }
 
         model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
@@ -380,12 +380,33 @@ static float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
 static float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 static speg_draw_call draw_call_dynamic = {0};
 
+#define PROFILE(func_call)                                                       \
+    do                                                                           \
+    {                                                                            \
+        unsigned long __startCycles;                                             \
+        unsigned long __endCycles;                                               \
+        double __startTimeNano;                                                  \
+        double __endTimeNano;                                                    \
+        (void)__startTimeNano;                                                   \
+        (void)__endTimeNano;                                                     \
+        __startTimeNano = platformApi->platform_perf_current_time_nanoseconds(); \
+        __startCycles = platformApi->platform_perf_current_cycle_count();        \
+        func_call;                                                               \
+        __endCycles = platformApi->platform_perf_current_cycle_count();          \
+        __endTimeNano = platformApi->platform_perf_current_time_nanoseconds();   \
+        platformApi->platform_print_console(                                     \
+            __FILE__,                                                            \
+            __LINE__,                                                            \
+            "[speg-profiler] cycles: %8d, ms: %12s, \"%s\"\n",                   \
+            (__endCycles - __startCycles),                                       \
+            "0.000000",                                                          \
+            #func_call);                                                         \
+    } while (0)
+
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
     static camera cam;
     speg_state *state = (speg_state *)memory->permanentMemory;
-    unsigned long startCycleCount;
-    unsigned long endCycleCount;
     m4x4 projection;
     m4x4 view;
     m4x4 projection_view;
@@ -400,14 +421,10 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     /* Initialized only once at startup */
     if (!memory->initialized)
     {
-        startCycleCount = platformApi->platform_perf_current_cycle_count();
-
         cam = camera_init();
         cam.position.z = 13.0f;
 
         memory->initialized = true;
-
-        endCycleCount = platformApi->platform_perf_current_cycle_count();
 
         state->clearColorR = 0.2f;
         state->clearColorG = 0.2f;
@@ -421,10 +438,9 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         draw_call_static.changed = false;
 
         /* Static scenes */
-        render_coordinate_axis(&draw_call_static);
-        render_cubes_instanced(&draw_call_static, 100.0f);
+        PROFILE(render_coordinate_axis(&draw_call_static));
+        PROFILE(render_cubes_instanced(&draw_call_static, 100.0f));
 
-        platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialization cycles: %4d\n", (endCycleCount - startCycleCount));
         platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialized\n");
     }
 
@@ -463,6 +479,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     state->renderedObjects = draw_call_static.count_instances + draw_call_dynamic.count_instances;
 
     /* Draw static and dynamic scenes*/
+
     platformApi->platform_draw(&draw_call_static, projection_view.e);
     platformApi->platform_draw(&draw_call_dynamic, projection_view.e);
 }

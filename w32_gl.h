@@ -153,8 +153,13 @@ typedef struct tagRECT
     LONG bottom;
 } RECT, *PRECT, *LPRECT;
 
-typedef struct LARGE_INTEGER
+typedef union _LARGE_INTEGER
 {
+    struct
+    {
+        DWORD LowPart;
+        LONG HighPart;
+    } u;
     LONGLONG QuadPart;
 } LARGE_INTEGER;
 
@@ -386,87 +391,166 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 
 /* WIN32 Function prototyes */
 #ifndef _WINDOWS_
-W32_API(BOOL) PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
-W32_API(BOOL) TranslateMessage(const MSG *lpMsg);
-W32_API(LRESULT) DispatchMessageA(const MSG *lpMsg);
-W32_API(BOOL) ShowWindow(HWND hWnd, int nCmdShow);
-W32_API(BOOL) DestroyWindow(HWND hWnd);
-W32_API(LRESULT) DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-W32_API(HCURSOR) LoadCursorA(HINSTANCE hInstance, LPCSTR lpCursorName);
-W32_API(int) ShowCursor(BOOL bShow);
-W32_API(ATOM) RegisterClassA(const WNDCLASSA *lpWndClass);
-W32_API(HWND) CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
-W32_API(BOOL) SetWindowTextA(HWND hWnd, LPCSTR lpString);
-W32_API(BOOL) SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
-W32_API(BOOL) AdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu);
-W32_API(void) Sleep(DWORD dwMilliseconds);
-W32_API(void) ExitProcess(UINT uExitCode);
-W32_API(void) PostQuitMessage(int nExitCode);
-W32_API(int) wsprintfA(LPSTR unnamedParam1, LPCSTR unnamedParam2, ...);
-W32_API(int) wvsprintfA(LPSTR unnamedParam1, LPCSTR unnamedParam2, va_list arglist);
-W32_API(long) CompareFileTime(const FILETIME *lpFileTime1, const FILETIME *lpFileTime2);
-W32_API(BOOL) GetFileAttributesExA(LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
-W32_API(BOOL) CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists);
-W32_API(HMODULE) LoadLibraryA(LPCSTR lpLibFileName);
-W32_API(BOOL) FreeLibrary(HMODULE hLibModule);
-W32_API(INT_PTR) GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
-W32_API(BOOL) CloseHandle(HANDLE hObject);
-W32_API(BOOL) GetClientRect(HWND hWnd, LPRECT lpRect);
-W32_API(int) MapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, UINT cPoints);
-W32_API(BOOL) ClipCursor(const RECT *lpRect);
-W32_API(BOOL) GetCursorPos(LPPOINT lpPoint);
-W32_API(BOOL) SetCursorPos(int X, int Y);
-W32_API(BOOL) ScreenToClient(HWND hWnd, LPPOINT lpPoint);
-W32_API(BOOL) ClientToScreen(HWND hWnd, LPPOINT lpPoint);
-W32_API(BOOL) QueryPerformanceCounter(LARGE_INTEGER *lpPerformanceCount);
-W32_API(BOOL) QueryPerformanceFrequency(LARGE_INTEGER *lpFrequency);
-W32_API(BOOL) SystemParametersInfoA(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni);
-W32_API(BOOL) SwapBuffers(HDC unnamedParam1);
-W32_API(HDC) GetDC(HWND hWnd);
-W32_API(int) ReleaseDC(HWND hWnd, HDC hDC);
-W32_API(BOOL) TextOutA(HDC hdc, int x, int y, LPCSTR lpString, int c);
-W32_API(int) ChoosePixelFormat(HDC hdc, const PIXELFORMATDESCRIPTOR *ppfd);
-W32_API(BOOL) SetPixelFormat(HDC hdc, int format, const PIXELFORMATDESCRIPTOR *ppfd);
-W32_API(int) DescribePixelFormat(HDC hdc, int iPixelFormat, UINT nBytes, LPPIXELFORMATDESCRIPTOR ppfd);
-W32_API(HANDLE) CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void *, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
-W32_API(BOOL) ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, void *lpOverlapped);
-W32_API(DWORD) GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh);
-W32_API(LPVOID) HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-W32_API(HANDLE) GetProcessHeap(void);
-W32_API(BOOL) HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
-W32_API(LPVOID) VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
-W32_API(HANDLE) GetStdHandle(DWORD nStdHandle);
-W32_API(BOOL) WriteConsoleA(HANDLE hConsoleOutput, const void *lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved);
-W32_API(HGLRC) wglCreateContext(HDC unnamedParam1);
-W32_API(HGLRC) wglGetCurrentContext(void);
-W32_API(HDC) wglGetCurrentDC(void);
-W32_API(BOOL) wglDeleteContext(HGLRC unnamedParam1);
-W32_API(BOOL) wglMakeCurrent(HDC unnamedParam1, HGLRC unnamedParam2);
-W32_API(PROC) wglGetProcAddress(LPCSTR unnamedParam1);
+W32_API(BOOL)
+PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
+W32_API(BOOL)
+TranslateMessage(const MSG *lpMsg);
+W32_API(LRESULT)
+DispatchMessageA(const MSG *lpMsg);
+W32_API(BOOL)
+ShowWindow(HWND hWnd, int nCmdShow);
+W32_API(BOOL)
+DestroyWindow(HWND hWnd);
+W32_API(LRESULT)
+DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+W32_API(HCURSOR)
+LoadCursorA(HINSTANCE hInstance, LPCSTR lpCursorName);
+W32_API(int)
+ShowCursor(BOOL bShow);
+W32_API(ATOM)
+RegisterClassA(const WNDCLASSA *lpWndClass);
+W32_API(HWND)
+CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
+W32_API(BOOL)
+SetWindowTextA(HWND hWnd, LPCSTR lpString);
+W32_API(BOOL)
+SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
+W32_API(BOOL)
+AdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu);
+W32_API(void)
+Sleep(DWORD dwMilliseconds);
+W32_API(void)
+ExitProcess(UINT uExitCode);
+W32_API(void)
+PostQuitMessage(int nExitCode);
+W32_API(int)
+wsprintfA(LPSTR unnamedParam1, LPCSTR unnamedParam2, ...);
+W32_API(int)
+wvsprintfA(LPSTR unnamedParam1, LPCSTR unnamedParam2, va_list arglist);
+W32_API(long)
+CompareFileTime(const FILETIME *lpFileTime1, const FILETIME *lpFileTime2);
+W32_API(BOOL)
+GetFileAttributesExA(LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
+W32_API(BOOL)
+CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists);
+W32_API(HMODULE)
+LoadLibraryA(LPCSTR lpLibFileName);
+W32_API(BOOL)
+FreeLibrary(HMODULE hLibModule);
+W32_API(INT_PTR)
+GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+W32_API(BOOL)
+CloseHandle(HANDLE hObject);
+W32_API(BOOL)
+GetClientRect(HWND hWnd, LPRECT lpRect);
+W32_API(int)
+MapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, UINT cPoints);
+W32_API(BOOL)
+ClipCursor(const RECT *lpRect);
+W32_API(BOOL)
+GetCursorPos(LPPOINT lpPoint);
+W32_API(BOOL)
+SetCursorPos(int X, int Y);
+W32_API(BOOL)
+ScreenToClient(HWND hWnd, LPPOINT lpPoint);
+W32_API(BOOL)
+ClientToScreen(HWND hWnd, LPPOINT lpPoint);
+W32_API(BOOL)
+QueryPerformanceCounter(LARGE_INTEGER *lpPerformanceCount);
+W32_API(BOOL)
+QueryPerformanceFrequency(LARGE_INTEGER *lpFrequency);
+W32_API(BOOL)
+SystemParametersInfoA(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni);
+W32_API(BOOL)
+SwapBuffers(HDC unnamedParam1);
+W32_API(HDC)
+GetDC(HWND hWnd);
+W32_API(int)
+ReleaseDC(HWND hWnd, HDC hDC);
+W32_API(BOOL)
+TextOutA(HDC hdc, int x, int y, LPCSTR lpString, int c);
+W32_API(int)
+ChoosePixelFormat(HDC hdc, const PIXELFORMATDESCRIPTOR *ppfd);
+W32_API(BOOL)
+SetPixelFormat(HDC hdc, int format, const PIXELFORMATDESCRIPTOR *ppfd);
+W32_API(int)
+DescribePixelFormat(HDC hdc, int iPixelFormat, UINT nBytes, LPPIXELFORMATDESCRIPTOR ppfd);
+W32_API(HANDLE)
+CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void *, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+W32_API(BOOL)
+ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, void *lpOverlapped);
+W32_API(DWORD)
+GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh);
+W32_API(LPVOID)
+HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
+W32_API(HANDLE)
+GetProcessHeap(void);
+W32_API(BOOL)
+HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
+W32_API(LPVOID)
+VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
+W32_API(HANDLE)
+GetStdHandle(DWORD nStdHandle);
+W32_API(BOOL)
+WriteConsoleA(HANDLE hConsoleOutput, const void *lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved);
+W32_API(HGLRC)
+wglCreateContext(HDC unnamedParam1);
+W32_API(HGLRC)
+wglGetCurrentContext(void);
+W32_API(HDC)
+wglGetCurrentDC(void);
+W32_API(BOOL)
+wglDeleteContext(HGLRC unnamedParam1);
+W32_API(BOOL)
+wglMakeCurrent(HDC unnamedParam1, HGLRC unnamedParam2);
+W32_API(PROC)
+wglGetProcAddress(LPCSTR unnamedParam1);
 /* Windows provided OPEN GL 1.X functions */
 W32_API(const GLubyte) * glGetString(GLenum name);
-W32_API(void) glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
-W32_API(void) glClear(GLbitfield mask);
-W32_API(GLenum) glGetError(void);
-W32_API(void) glEnable(GLenum cap);
-W32_API(void) glDisable(GLenum cap);
-W32_API(void) glPolygonMode(GLenum face, GLenum mode);
-W32_API(void) glCullFace(GLenum mode);
-W32_API(void) glFrontFace(GLenum mode);
-W32_API(void) glViewport(GLint x, GLint y, GLsizei width, GLsizei height);
-W32_API(void) glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-W32_API(void) glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
-W32_API(void) glDepthMask(GLboolean flag);
-W32_API(void) glReadBuffer(GLenum mode);
-W32_API(void) glDrawBuffer(GLenum mode);
-W32_API(void) glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
-W32_API(void) glGenTextures(GLsizei n, GLuint *textures);
-W32_API(void) glBindTexture(GLenum target, GLuint texture);
-W32_API(void) glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLint format, GLenum type, const GLvoid *pixels);
-W32_API(void) glTexParameteri(GLenum target, GLenum pname, GLint param);
-W32_API(void) glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
-W32_API(BOOL) RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
-W32_API(UINT) GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
+W32_API(void)
+glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
+W32_API(void)
+glClear(GLbitfield mask);
+W32_API(GLenum)
+glGetError(void);
+W32_API(void)
+glEnable(GLenum cap);
+W32_API(void)
+glDisable(GLenum cap);
+W32_API(void)
+glPolygonMode(GLenum face, GLenum mode);
+W32_API(void)
+glCullFace(GLenum mode);
+W32_API(void)
+glFrontFace(GLenum mode);
+W32_API(void)
+glViewport(GLint x, GLint y, GLsizei width, GLsizei height);
+W32_API(void)
+glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+W32_API(void)
+glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+W32_API(void)
+glDepthMask(GLboolean flag);
+W32_API(void)
+glReadBuffer(GLenum mode);
+W32_API(void)
+glDrawBuffer(GLenum mode);
+W32_API(void)
+glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
+W32_API(void)
+glGenTextures(GLsizei n, GLuint *textures);
+W32_API(void)
+glBindTexture(GLenum target, GLuint texture);
+W32_API(void)
+glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLint format, GLenum type, const GLvoid *pixels);
+W32_API(void)
+glTexParameteri(GLenum target, GLenum pname, GLint param);
+W32_API(void)
+glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
+W32_API(BOOL)
+RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
+W32_API(UINT)
+GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
 #endif
 
 DWORD w32_strlen(const char *str)

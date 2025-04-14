@@ -86,6 +86,7 @@ typedef void (*func_speg_platform_print_console)(const char *file, const int lin
 typedef void (*func_speg_platform_sleep)(unsigned long milliseconds);
 typedef void (*func_speg_platform_draw)(speg_draw_call *draw_call, float uniformProjectionView[16]);
 typedef unsigned long (*func_speg_platform_perf_current_cycle_count)(void);
+typedef double (*func_platform_perf_current_time_nanoseconds)(void);
 
 typedef struct speg_platform_api
 {
@@ -96,6 +97,7 @@ typedef struct speg_platform_api
 
     /* Performance & Debugging Metrics */
     func_speg_platform_perf_current_cycle_count platform_perf_current_cycle_count;
+    func_platform_perf_current_time_nanoseconds platform_perf_current_time_nanoseconds;
 
 } speg_platform_api;
 

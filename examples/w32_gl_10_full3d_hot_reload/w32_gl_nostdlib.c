@@ -290,6 +290,29 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
   drawCallsPerFrame++;
 }
 
+double platform_perf_current_time_nanoseconds()
+{
+  static LARGE_INTEGER perfCountFrequency;
+  static bool time_initialized = false;
+
+  if (!time_initialized)
+  {
+    QueryPerformanceFrequency(&perfCountFrequency);
+    time_initialized = true;
+  }
+
+  LARGE_INTEGER counter;
+  QueryPerformanceCounter(&counter);
+
+  /* Convert the 64-bit counter value into a double for precision */
+  double counterValue = (double)counter.u.HighPart * ((double)0x100000000) + (double)counter.u.LowPart;
+
+  /* Convert the 64-bit frequency value into a double */
+  double frequencyValue = (double)perfCountFrequency.u.HighPart * ((double)0x100000000) + (double)perfCountFrequency.u.LowPart;
+
+  return (counterValue * 1000000000.0) / frequencyValue;
+}
+
 #include "stdarg.h"
 void platform_print_console(const char *file, const int line, char *formatString, ...)
 {
@@ -840,6 +863,7 @@ mainCRTStartup(void)
   platformApi.platform_print_console = platform_print_console;
   platformApi.platform_sleep = Sleep;
   platformApi.platform_perf_current_cycle_count = w32_rdtsc;
+  platformApi.platform_perf_current_time_nanoseconds = platform_perf_current_time_nanoseconds;
 
   speg_memory memory = {0};
   memory.permanentMemorySize = 1024 * 1024 * 1; /* 1 MB Allocation */
