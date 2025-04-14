@@ -209,21 +209,25 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
     m4x4 projection_view = vm_m4x4_mul(projection, view);
     frustum frustum_planes = vm_frustum_extract_planes(projection_view);
     int i;
-    m4x4 model;
     bool draw;
-    int isInFrustum;
+
+    const float rangeMin = -range;
+    const float rangeMax = range;
+    const v3 rotation_axis = vm_v3_normalize(vm_v3(1.0f, 0.3f, 0.5f));
+    const v3 color_red = vm_v3(1.0f, 0.0f, 0.0f);
+    const float color_scale = 1.0f / 255.0f;
 
     vm_seed_lcg = 12345;
 
     for (i = 0; i < numCubes; ++i)
     {
         unsigned int color = (i == 0 ? 1 : i) * 10000000;
-        unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
-        unsigned int green = (color & 0x0000FF00) >> 8;
-        unsigned int blue = (color & 0x000000FF);
+        float r = ((float)(((color >> 16) & 0xFF) >> 1)) * color_scale;
+        float g = ((float)((color >> 8) & 0xFF)) * color_scale;
+        float b = ((float)(color & 0xFF)) * color_scale;
 
         v3 targetPosition = vm_v3_zero;
-        v3 targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
+        v3 targetColor = vm_v3(r, g, b);
 
         if (i == 0)
         {
@@ -231,9 +235,6 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
         }
         else
         {
-            float rangeMin = -range;
-            float rangeMax = range;
-
             float xPos = vm_randf_range(rangeMin, rangeMax);
             float yPos = vm_randf_range(rangeMin, rangeMax);
             float zPos = vm_randf_range(rangeMin, rangeMax);
@@ -243,26 +244,16 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
             targetPosition.z = zPos;
         }
 
-        /* calculate the model matrix for each object and pass it to shader before drawing */
-        model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
-
-        if (i > 0)
-        {
-            model = vm_m4x4_rotate(model, vm_radf(20.0f * (float)i), vm_v3_normalize(vm_v3(1.0f, 0.3f, 0.5f)));
-        }
-
         /* TODO: epsilon 0.15f is needed because cubes are rotating and its not considered in the frustum check */
-        isInFrustum = vm_frustum_is_cube_in(frustum_planes, targetPosition, vm_v3_one, 0.15f);
+        draw = (bool)vm_frustum_is_cube_in(frustum_planes, targetPosition, vm_v3_one, 0.15f);
 
-        draw = (bool)isInFrustum;
-
-        if (!isInFrustum)
+        if (!draw)
         {
             /* DISCARD - but in case we want to show discarded objects e.g. simulateCam = true we still render them */
             if (input->cameraSimulate.endedDown)
             {
                 draw = true;
-                targetColor = vm_v3(1.0f, 0.0f, 0.0f);
+                targetColor = color_red;
             }
             state->culledObjects++;
         }
@@ -270,6 +261,15 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
         /* Finally draw to screen by using platform api */
         if (draw)
         {
+
+            /* calculate the model matrix for each object and pass it to shader before drawing */
+            m4x4 model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
+
+            if (i > 0)
+            {
+                model = vm_m4x4_rotate(model, vm_radf(20.0f * (float)i), rotation_axis);
+            }
+
             speg_draw_call_append(call, &model, &targetColor);
         }
     }
@@ -375,6 +375,11 @@ static float all_static_models[MAX_STATIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
 static float all_static_colors[MAX_STATIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 static speg_draw_call draw_call_static = {0};
 
+#define MAX_DYNAMIC_INSTANCES 1024
+static float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
+static speg_draw_call draw_call_dynamic = {0};
+
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
     static camera cam;
@@ -385,11 +390,6 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     m4x4 view;
     m4x4 projection_view;
     m4x4 view_simulated;
-    speg_draw_call draw_call_dynamic = {0};
-
-#define MAX_DYNAMIC_INSTANCES 1024
-    float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
-    float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 
     assert(memory);
     assert(memory->permanentMemorySize > 0);
@@ -448,8 +448,6 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     }
 
     projection_view = vm_m4x4_mul(projection, view);
-
-    (void)view_simulated;
 
     draw_call_dynamic.mesh = &cube_dynamic;
     draw_call_dynamic.count_instances_max = array_size(all_dynamic_models);
