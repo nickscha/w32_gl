@@ -38,6 +38,18 @@ static unsigned int cube_indices[] = {
     3, 7, 6,
     6, 2, 3};
 
+static float rectangle_vertices[] = {
+    -0.5f, -0.5f, 0.0f, /* Bottom-left */
+    0.5f, -0.5f, 0.0f,  /* Bottom-right */
+    0.5f, 0.5f, 0.0f,   /* Top-right */
+    -0.5f, 0.5f, 0.0f   /* Top-left */
+};
+
+static unsigned int rectangle_indices[] = {
+    0, 1, 2, /* First triangle */
+    2, 3, 0  /* Second triangle */
+};
+
 typedef struct camera
 {
     v3 position;
@@ -132,6 +144,7 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
 }
 
 static speg_mesh cube_static = {
+    "cube_static",
     false,
     true, /* Enable face culling */
     cube_vertices,
@@ -141,6 +154,7 @@ static speg_mesh cube_static = {
     array_size(cube_indices)};
 
 static speg_mesh cube_dynamic = {
+    "cube_dynamic",
     false,
     true, /* Enable face culling */
     cube_vertices,
@@ -148,6 +162,16 @@ static speg_mesh cube_dynamic = {
     cube_indices,
     sizeof(cube_indices),
     array_size(cube_indices)};
+
+static speg_mesh rectangle_static = {
+    "rectangle_static",
+    false,
+    false,
+    rectangle_vertices,
+    sizeof(rectangle_vertices),
+    rectangle_indices,
+    sizeof(rectangle_indices),
+    array_size(rectangle_indices)};
 
 void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color)
 {
@@ -380,13 +404,16 @@ static float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
 static float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 static speg_draw_call draw_call_dynamic = {0};
 
+#define MAX_DYNAMIC_GUI_INSTANCES 128
+static float all_dynamic_gui_models[MAX_DYNAMIC_GUI_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_dynamic_gui_colors[MAX_DYNAMIC_GUI_INSTANCES * VM_V3_ELEMENT_COUNT];
+static speg_draw_call draw_call_dynamic_gui = {0};
+
 #define PROFILE(func_call)                                                       \
     do                                                                           \
     {                                                                            \
-        unsigned long __startCycles;                                             \
-        unsigned long __endCycles;                                               \
-        double __startTimeNano;                                                  \
-        double __endTimeNano;                                                    \
+        unsigned long __startCycles, __endCycles;                                \
+        double __startTimeNano, __endTimeNano;                                   \
         (void)__startTimeNano;                                                   \
         (void)__endTimeNano;                                                     \
         __startTimeNano = platformApi->platform_perf_current_time_nanoseconds(); \
@@ -403,11 +430,39 @@ static speg_draw_call draw_call_dynamic = {0};
             #func_call);                                                         \
     } while (0)
 
+void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controller_input *input)
+{
+    float width = 200.0f;
+    float height = 30.0f;
+
+    float screen_width = (float)state->width;
+    float screen_height = (float)state->height;
+
+    v3 position = vm_v3(screen_width * 0.5f, screen_height - height, 0.0f);
+    v3 color = vm_v3(1.0f, 1.0f, 1.0f);
+    v3 colorSelected = vm_v3(1.0f, 0.0f, 0.0f);
+
+    m4x4 model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(width, height, 1.0f));
+
+    int mouseX = input->mousePosX;
+    int mouseY = state->height - input->mousePosY; /* Flip Y for OpenGL coords */
+    float halfWidth = width * 0.5f;
+    float halfHeight = height * 0.5f;
+
+    bool inside = (mouseX >= position.x - halfWidth &&
+                   mouseX <= position.x + halfWidth &&
+                   mouseY >= position.y - halfHeight &&
+                   mouseY <= position.y + halfHeight);
+
+    speg_draw_call_append(call, &model, inside ? &colorSelected : &color);
+}
+
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
     static camera cam;
     speg_state *state = (speg_state *)memory->permanentMemory;
     m4x4 projection;
+    m4x4 ortho_proj;
     m4x4 view;
     m4x4 projection_view;
     m4x4 view_simulated;
@@ -448,6 +503,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     projection = vm_m4x4_perspective(vm_radf(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
+    ortho_proj = vm_m4x4_orthographic(0.0f, (float)state->width, 0.0f, (float)state->height, -1.0f, 1.0f);
 
     if (input->cameraSimulate.endedDown)
     {
@@ -472,16 +528,25 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     draw_call_dynamic.colors = all_dynamic_colors;
     draw_call_dynamic.changed = true;
 
+    draw_call_dynamic_gui.mesh = &rectangle_static;
+    draw_call_dynamic_gui.count_instances_max = array_size(all_dynamic_gui_models);
+    draw_call_dynamic_gui.count_instances = 0;
+    draw_call_dynamic_gui.models = all_dynamic_gui_models;
+    draw_call_dynamic_gui.colors = all_dynamic_gui_colors;
+    draw_call_dynamic_gui.changed = true;
+    draw_call_dynamic_gui.is_2d = true;
+
     /* Dynamic scenes */
     render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f);
     render_transformations_test(&draw_call_dynamic, state);
+    render_gui_rectangle(&draw_call_dynamic_gui, state, input);
 
-    state->renderedObjects = draw_call_static.count_instances + draw_call_dynamic.count_instances;
+    state->renderedObjects = draw_call_static.count_instances + draw_call_dynamic.count_instances + draw_call_dynamic_gui.count_instances;
 
-    /* Draw static and dynamic scenes*/
-
+    /* Draw static and dynamic scenes */
     platformApi->platform_draw(&draw_call_static, projection_view.e);
     platformApi->platform_draw(&draw_call_dynamic, projection_view.e);
+    platformApi->platform_draw(&draw_call_dynamic_gui, ortho_proj.e);
 }
 
 #ifdef _WIN32

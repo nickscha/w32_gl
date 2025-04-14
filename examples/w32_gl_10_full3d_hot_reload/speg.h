@@ -45,6 +45,8 @@ typedef char bool;
 
 typedef struct speg_mesh
 {
+    char id[20];
+
     bool initialized;
     bool faceCulling;
 
@@ -76,6 +78,7 @@ typedef struct speg_draw_call
     int count_instances_max;
 
     int changed;
+    int is_2d;
 
 } speg_draw_call;
 
@@ -141,6 +144,8 @@ typedef struct speg_controller_input
     float mouseScrollOffset;
     float mouseXOffset;
     float mouseYOffset;
+    int mousePosX;
+    int mousePosY;
 
 } speg_controller_input;
 #pragma GCC diagnostic pop

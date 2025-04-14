@@ -28,9 +28,9 @@ static bool globalPause = false;
 static bool vsync = true;
 static bool wireframeMode = false;
 
-int width = 800;
-int height = 600;
-double dt = 0.0;
+static int width = 800;
+static int height = 600;
+static double dt = 0.0;
 HWND window;
 
 static unsigned int drawCallsPerFrame = 0;
@@ -249,7 +249,7 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
 
     mesh->initialized = true;
 
-    win32_print_console("[win32] mesh initialized, vao: %i, vbo: %i, ebo: %i, ibo: %i, cbo: %i, face_culling: %s, dynamic: %s\n", mesh->VAO, mesh->VBO, mesh->EBO, mesh->IBO, mesh->CBO, mesh->faceCulling ? "true" : "false", draw_call->changed ? "true" : "false");
+    win32_print_console("[win32] mesh initialized id: %-20s, vao: %3i, vbo: %3i, ebo: %3i, ibo: %3i, cbo: %3i, face_culling: %5s, dynamic: %5s, is_2d: %5s\n", mesh->id, mesh->VAO, mesh->VBO, mesh->EBO, mesh->IBO, mesh->CBO, mesh->faceCulling ? "true" : "false", draw_call->changed ? "true" : "false", draw_call->is_2d ? "true" : "false");
   }
 
   /* Mesh changed */
@@ -277,10 +277,20 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     glDisable(GL_CULL_FACE);
   }
 
+  if (draw_call->is_2d)
+  {
+    glDisable(GL_DEPTH_TEST);
+  }
+
   glBindVertexArray(mesh->VAO);
   glUniformMatrix4fv(uniformLocationProjectionView, 1, GL_FALSE, uniformProjectionView);
   glDrawElementsInstanced(GL_TRIANGLES, mesh->indicesCount, GL_UNSIGNED_INT, 0, draw_call->count_instances);
   glBindVertexArray(0);
+
+  if (draw_call->is_2d)
+  {
+    glEnable(GL_DEPTH_TEST);
+  }
 
   if (!mesh->faceCulling)
   {
@@ -455,19 +465,12 @@ void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_in
       GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
 
       /* Ensure the size is within our fixed buffer size */
-      if (dwSize > 64)
-      {
-        /* If the raw input data size is larger than our fixed buffer size, handle the error */
-        assert(1 == 0);
-      }
+      assert(dwSize <= 64);
 
       LPBYTE lpb[64];
 
       /* Get the raw input data into the fixed buffer */
-      if (GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
-      {
-        assert(1 == 0); /* Handle data retrieval failure */
-      }
+      assert(GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
 
       RAWINPUT *raw = (RAWINPUT *)lpb;
 
@@ -476,6 +479,14 @@ void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_in
         newInput->mouseXOffset += (float)raw->data.mouse.lLastX;
         newInput->mouseYOffset += (float)raw->data.mouse.lLastY;
       }
+    }
+    break;
+    case WM_MOUSEMOVE:
+    {
+      newInput->mousePosX = GET_X_LPARAM(message.lParam);
+      oldInput->mousePosX = newInput->mousePosX;
+      newInput->mousePosY = GET_Y_LPARAM(message.lParam);
+      oldInput->mousePosY = newInput->mousePosY;
     }
     break;
     case WM_MOUSEWHEEL:
