@@ -164,6 +164,8 @@ void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color)
     int c_offset = call->count_instances * VM_V3_ELEMENT_COUNT;
     int i;
 
+    assert(call->count_instances + 1 < call->count_instances_max);
+
     for (i = 0; i < VM_M4X4_ELEMENT_COUNT; ++i)
     {
         call->models[m_offset + i] = model->e[i];
