@@ -202,8 +202,7 @@ void platform_draw(
     int changed,
     float models[],
     float colors[],
-    float uniformProjection[16],
-    float uniformView[16])
+    float uniformProjectionView[16])
 {
   if (numberOfObjects == 0)
   {
@@ -274,15 +273,13 @@ void platform_draw(
   }
 
   static bool initialized_gl = false;
-  static GLint uniformLocationProjection = -1;
-  static GLint uniformLocationView = -1;
+  static GLint uniformLocationProjectionView = -1;
 
   if (!initialized_gl)
   {
     glUseProgram(shaders.instanced.program);
     shader_last_used_program = shaders.instanced.program;
-    uniformLocationProjection = glGetUniformLocation(shaders.instanced.program, "projection");
-    uniformLocationView = glGetUniformLocation(shaders.instanced.program, "view");
+    uniformLocationProjectionView = glGetUniformLocation(shaders.instanced.program, "pv");
     initialized_gl = true;
   }
 
@@ -298,8 +295,7 @@ void platform_draw(
   }
 
   glBindVertexArray(mesh->VAO);
-  glUniformMatrix4fv(uniformLocationProjection, 1, GL_FALSE, uniformProjection);
-  glUniformMatrix4fv(uniformLocationView, 1, GL_FALSE, uniformView);
+  glUniformMatrix4fv(uniformLocationProjectionView, 1, GL_FALSE, uniformProjectionView);
   glDrawElementsInstanced(GL_TRIANGLES, mesh->indicesCount, GL_UNSIGNED_INT, 0, numberOfObjects);
   glBindVertexArray(0);
 

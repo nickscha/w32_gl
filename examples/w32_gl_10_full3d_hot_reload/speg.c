@@ -522,6 +522,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     unsigned long endCycleCount;
     m4x4 projection;
     m4x4 view;
+    m4x4 projection_view;
     m4x4 view_simulated;
     speg_draw_call call;
     speg_draw_call call2;
@@ -558,6 +559,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     projection = vm_m4x4_perspective(vm_radf(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
+    projection_view = vm_m4x4_mul(projection, view);
 
     if (input->cameraSimulate.endedDown)
     {
@@ -578,10 +580,10 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     call3 = render_cubes(projection, &view_simulated, state, input, 20.0f);
     call4 = render_transformations_test(state);
 
-    platformApi->platform_draw(call.mesh, call.matrices_count, false, call.matrices, call.colors, projection.e, view.e);
-    platformApi->platform_draw(call2.mesh, call2.matrices_count, false, call2.matrices, call2.colors, projection.e, view.e);
-    platformApi->platform_draw(call3.mesh, call3.matrices_count, true, call3.matrices, call3.colors, projection.e, view.e);
-    platformApi->platform_draw(call4.mesh, call4.matrices_count, true, call4.matrices, call4.colors, projection.e, view.e);
+    platformApi->platform_draw(call.mesh, call.matrices_count, false, call.matrices, call.colors, projection_view.e);
+    platformApi->platform_draw(call2.mesh, call2.matrices_count, false, call2.matrices, call2.colors, projection_view.e);
+    platformApi->platform_draw(call3.mesh, call3.matrices_count, true, call3.matrices, call3.colors, projection_view.e);
+    platformApi->platform_draw(call4.mesh, call4.matrices_count, true, call4.matrices, call4.colors, projection_view.e);
 }
 
 #ifdef _WIN32

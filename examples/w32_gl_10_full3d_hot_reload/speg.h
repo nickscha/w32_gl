@@ -74,7 +74,7 @@ typedef struct speg_mesh
 /*****************************/
 typedef void (*func_speg_platform_print_console)(const char *file, const int line, char *formatString, ...);
 typedef void (*func_speg_platform_sleep)(unsigned long milliseconds);
-typedef void (*func_speg_platform_draw)(speg_mesh *mesh, int numberOfObjects, int changed, float models[], float colors[], float uniformProjection[16], float uniformView[16]);
+typedef void (*func_speg_platform_draw)(speg_mesh *mesh, int numberOfObjects, int changed, float models[], float colors[], float uniformProjectionView[16]);
 typedef unsigned long (*func_speg_platform_perf_current_cycle_count)(void);
 
 typedef struct speg_platform_api
