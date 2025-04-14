@@ -65,8 +65,6 @@ typedef struct speg_mesh
     unsigned int IBO;
     unsigned int CBO;
 
-    int lastInstancedNumberOfObjects;
-
 } speg_mesh;
 
 /*****************************/

@@ -130,7 +130,7 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     camera_update_vectors(cam);
 }
 
-static speg_mesh cube = {
+static speg_mesh cube_static = {
     false,
     true, /* Enable face culling */
     cube_vertices,
@@ -139,25 +139,7 @@ static speg_mesh cube = {
     sizeof(cube_indices),
     array_size(cube_indices)};
 
-static speg_mesh cube2 = {
-    false,
-    true, /* Enable face culling */
-    cube_vertices,
-    sizeof(cube_vertices),
-    cube_indices,
-    sizeof(cube_indices),
-    array_size(cube_indices)};
-
-static speg_mesh cube3 = {
-    false,
-    true, /* Enable face culling */
-    cube_vertices,
-    sizeof(cube_vertices),
-    cube_indices,
-    sizeof(cube_indices),
-    array_size(cube_indices)};
-
-static speg_mesh cube4 = {
+static speg_mesh cube_dynamic = {
     false,
     true, /* Enable face culling */
     cube_vertices,
@@ -169,17 +151,34 @@ static speg_mesh cube4 = {
 typedef struct speg_draw_call
 {
     speg_mesh *mesh;
-    float *matrices;
-    int matrices_count;
+    float *models;
     float *colors;
+    int count_instances;
+    int count_instances_max;
 
 } speg_draw_call;
 
-/* Render X, Y, Z axis lines (we use cubes but scaled in length and reduced in thichness)*/
-speg_draw_call render_coordinate_axis(speg_state *state)
+void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color)
 {
-    speg_draw_call call = {0};
+    int m_offset = call->count_instances * VM_M4X4_ELEMENT_COUNT;
+    int c_offset = call->count_instances * VM_V3_ELEMENT_COUNT;
+    int i;
 
+    for (i = 0; i < VM_M4X4_ELEMENT_COUNT; ++i)
+    {
+        call->models[m_offset + i] = model->e[i];
+    }
+
+    call->colors[c_offset + 0] = color->x;
+    call->colors[c_offset + 1] = color->y;
+    call->colors[c_offset + 2] = color->z;
+
+    call->count_instances += 1;
+}
+
+/* Render X, Y, Z axis lines (we use cubes but scaled in length and reduced in thichness)*/
+void render_coordinate_axis(speg_draw_call *call)
+{
     const float axisLength = 160.0f;
     const float axisThickness = 0.04f;
 
@@ -189,11 +188,7 @@ speg_draw_call render_coordinate_axis(speg_state *state)
     v3 axisSizes[3];    /* X, Y , Z*/
     m4x4 axisModels[3]; /* X, Y , Z*/
 
-    static float models[3 * VM_M4X4_ELEMENT_COUNT];
-    static float colors[3 * VM_V3_ELEMENT_COUNT];
-
     int i;
-    int j;
 
     axisColors[0] = vm_v3(1.0f, 0.0f, 0.0f);
     axisColors[1] = vm_v3(0.0f, 1.0f, 0.0f);
@@ -209,54 +204,27 @@ speg_draw_call render_coordinate_axis(speg_state *state)
 
     for (i = 0; i < (int)array_size(axisModels); ++i)
     {
-        int idx_base = (i * VM_M4X4_ELEMENT_COUNT);
-        int idx_base_color = (i * VM_V3_ELEMENT_COUNT);
-
-        for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-        {
-            models[idx_base + j] = axisModels[i].e[j]; /* model matrix */
-        }
-
-        colors[idx_base_color + 0] = axisColors[i].x; /* R */
-        colors[idx_base_color + 1] = axisColors[i].y; /* G */
-        colors[idx_base_color + 2] = axisColors[i].z; /* B */
+        speg_draw_call_append(call, &axisModels[i], &axisColors[i]);
     }
-
-    call.mesh = &cube;
-    call.matrices = models;
-    call.colors = colors;
-    call.matrices_count = (int)array_size(axisModels);
-
-    state->renderedObjects += (int)array_size(axisModels);
-
-    return (call);
 }
 
-speg_draw_call render_cubes(m4x4 projection, m4x4 *view, speg_state *state, speg_controller_input *input, float range)
+void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *state, speg_controller_input *input, float range)
 {
-    speg_draw_call call = {0};
 
 #define NUM_INSTANCED_FRUST_CUBES 1000
     static int numCubes = NUM_INSTANCED_FRUST_CUBES;
-    static float models[NUM_INSTANCED_FRUST_CUBES * VM_M4X4_ELEMENT_COUNT];
-    static float colors[NUM_INSTANCED_FRUST_CUBES * VM_V3_ELEMENT_COUNT];
 
-    m4x4 projection_view = vm_m4x4_mul(projection, *view);
+    m4x4 projection_view = vm_m4x4_mul(projection, view);
     frustum frustum_planes = vm_frustum_extract_planes(projection_view);
     int i;
-    int j;
     m4x4 model;
     bool draw;
     int isInFrustum;
-    int c = 0;
 
     vm_seed_lcg = 12345;
 
     for (i = 0; i < numCubes; ++i)
     {
-        int idx_base = (c * VM_M4X4_ELEMENT_COUNT);
-        int idx_base_color = (c * VM_V3_ELEMENT_COUNT);
-
         unsigned int color = (i == 0 ? 1 : i) * 10000000;
         unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
         unsigned int green = (color & 0x0000FF00) >> 8;
@@ -296,12 +264,7 @@ speg_draw_call render_cubes(m4x4 projection, m4x4 *view, speg_state *state, speg
 
         draw = (bool)isInFrustum;
 
-        if (isInFrustum)
-        {
-            /* DRAW */
-            state->renderedObjects++;
-        }
-        else
+        if (!isInFrustum)
         {
             /* DISCARD - but in case we want to show discarded objects e.g. simulateCam = true we still render them */
             if (input->cameraSimulate.endedDown)
@@ -315,101 +278,47 @@ speg_draw_call render_cubes(m4x4 projection, m4x4 *view, speg_state *state, speg
         /* Finally draw to screen by using platform api */
         if (draw)
         {
-            for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-            {
-                models[idx_base + j] = model.e[j]; /* model matrix */
-            }
-
-            colors[idx_base_color + 0] = targetColor.x; /* R */
-            colors[idx_base_color + 1] = targetColor.y; /* G */
-            colors[idx_base_color + 2] = targetColor.z; /* B */
-
-            c++;
+            speg_draw_call_append(call, &model, &targetColor);
         }
     }
-
-    call.mesh = &cube2;
-    call.matrices = models;
-    call.colors = colors;
-    call.matrices_count = c;
-
-    return (call);
 }
 
-speg_draw_call render_cubes_instanced(speg_state *state, float range)
+void render_cubes_instanced(speg_draw_call *call, float range)
 {
-    static bool calculatedPositions = false;
 
 #define NUM_INSTANCED_CUBES 20000
     static int numCubes = NUM_INSTANCED_CUBES;
-    static float models[NUM_INSTANCED_CUBES * VM_M4X4_ELEMENT_COUNT];
-    static float colors[NUM_INSTANCED_CUBES * VM_V3_ELEMENT_COUNT];
+    int i;
 
-    m4x4 model;
-
-    speg_draw_call call = {0};
-
-    if (!calculatedPositions)
+    for (i = 0; i < numCubes; ++i)
     {
-        int i;
-        int j;
+        m4x4 model;
+        v3 targetPosition = vm_v3_zero;
+        v3 targetColor = vm_v3_one;
 
-        for (i = 0; i < numCubes; ++i)
+        unsigned int color = (i == 0 ? 1 : i) * 10000000;
+        unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
+        unsigned int green = (color & 0x0000FF00) >> 8;
+        unsigned int blue = (color & 0x000000FF);
+
+        if (i > 0)
         {
-            v3 targetPosition = vm_v3_zero;
-            int idx_base = (i * VM_M4X4_ELEMENT_COUNT);
-            int idx_base_color = (i * VM_V3_ELEMENT_COUNT);
-
-            unsigned int color = (i == 0 ? 1 : i) * 10000000;
-            unsigned int red = ((color & 0x00FF0000) >> 16) / 2; /* Avoid red */
-            unsigned int green = (color & 0x0000FF00) >> 8;
-            unsigned int blue = (color & 0x000000FF);
-
-            v3 targetColor = vm_v3_one;
-
-            if (i > 0)
-            {
-                float rangeMin = -range;
-                float rangeMax = range;
-                targetPosition.x = vm_randf_range(rangeMin, rangeMax);
-                targetPosition.y = vm_randf_range(rangeMin, rangeMax);
-                targetPosition.z = vm_randf_range(rangeMin, rangeMax);
-                targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
-            }
-
-            model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
-
-            for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-            {
-                models[idx_base + j] = model.e[j]; /* model matrix */
-            }
-
-            colors[idx_base_color + 0] = targetColor.x; /* R */
-            colors[idx_base_color + 1] = targetColor.y; /* G */
-            colors[idx_base_color + 2] = targetColor.z; /* B */
+            float rangeMin = -range;
+            float rangeMax = range;
+            targetPosition.x = vm_randf_range(rangeMin, rangeMax);
+            targetPosition.y = vm_randf_range(rangeMin, rangeMax);
+            targetPosition.z = vm_randf_range(rangeMin, rangeMax);
+            targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
         }
 
-        calculatedPositions = true;
+        model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
+
+        speg_draw_call_append(call, &model, &targetColor);
     }
-
-    call.mesh = &cube3;
-    call.matrices = models;
-    call.colors = colors;
-    call.matrices_count = numCubes;
-
-    state->renderedObjects += numCubes;
-
-    return (call);
 }
 
-speg_draw_call render_transformations_test(speg_state *state)
+void render_transformations_test(speg_draw_call *call, speg_state *state)
 {
-
-    speg_draw_call call = {0};
-
-    static float models[7 * VM_M4X4_ELEMENT_COUNT];
-    static float colors[7 * VM_V3_ELEMENT_COUNT];
-
     transformation parent = vm_tranformation_init();
     transformation child = vm_tranformation_init();
     transformation child2 = vm_tranformation_init();
@@ -418,9 +327,8 @@ speg_draw_call render_transformations_test(speg_state *state)
     transformation child41 = vm_tranformation_init();
     transformation child411 = vm_tranformation_init();
 
-    int j = 0;
-
     m4x4 current_transform;
+    v3 color;
 
     static float rotation = 90.0f;
     rotation += (100.0f * (float)state->dt);
@@ -428,91 +336,52 @@ speg_draw_call render_transformations_test(speg_state *state)
     parent.position.x = 4.0f;
     vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_radf(rotation));
     current_transform = vm_transformation_matrix(&parent);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(0 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(0 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
-    colors[(0 * VM_V3_ELEMENT_COUNT) + 1] = 0.0f;
-    colors[(0 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+    color = vm_v3(1.0f, 0.0f, 0.0f);
+    speg_draw_call_append(call, &current_transform, &color);
 
     child.position = vm_v3(3.0f, 0.0f, 0.0f);
     child.parent = &parent;
     current_transform = vm_transformation_matrix(&child);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(1 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(1 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
-    colors[(1 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
-    colors[(1 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+    color = vm_v3(1.0f, 0.8745f, 0.0f);
+    speg_draw_call_append(call, &current_transform, &color);
 
     child2.position = vm_v3(-3.0f, 0.0f, 0.0f);
     child2.parent = &parent;
     current_transform = vm_transformation_matrix(&child2);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(2 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(2 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
-    colors[(2 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
-    colors[(2 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+    color = vm_v3(1.0f, 0.8745f, 0.0f);
+    speg_draw_call_append(call, &current_transform, &color);
 
     child3.position = vm_v3(0.0f, 0.0f, 3.0f);
     child3.parent = &parent;
     current_transform = vm_transformation_matrix(&child3);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(3 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(3 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
-    colors[(3 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
-    colors[(3 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+    color = vm_v3(1.0f, 0.8745f, 0.0f);
+    speg_draw_call_append(call, &current_transform, &color);
 
     child4.position = vm_v3(0.0f, 0.0f, -3.0f);
     child4.parent = &parent;
     child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 2.0f));
     current_transform = vm_transformation_matrix(&child4);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(4 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(4 * VM_V3_ELEMENT_COUNT) + 0] = 1.0f;
-    colors[(4 * VM_V3_ELEMENT_COUNT) + 1] = 0.8745f;
-    colors[(4 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+    color = vm_v3(1.0f, 0.8745f, 0.0f);
+    speg_draw_call_append(call, &current_transform, &color);
 
     child41.position = vm_v3(0.0f, 0.0f, -2.0f);
     child41.parent = &child4;
     child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 4.0f));
     current_transform = vm_transformation_matrix(&child41);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(5 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(5 * VM_V3_ELEMENT_COUNT) + 0] = 0.0f;
-    colors[(5 * VM_V3_ELEMENT_COUNT) + 1] = 1.0f;
-    colors[(5 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
+    color = vm_v3(0.0f, 1.0f, 0.0f);
+    speg_draw_call_append(call, &current_transform, &color);
 
     child411.position = vm_v3(0.0f, 0.0f, -2.0f);
     child411.parent = &child41;
     current_transform = vm_transformation_matrix(&child411);
-    for (j = 0; j < VM_M4X4_ELEMENT_COUNT; ++j)
-    {
-        models[(6 * VM_M4X4_ELEMENT_COUNT) + j] = current_transform.e[j]; /* model matrix */
-    }
-    colors[(6 * VM_V3_ELEMENT_COUNT) + 0] = 0.0f;
-    colors[(6 * VM_V3_ELEMENT_COUNT) + 1] = 0.0f;
-    colors[(6 * VM_V3_ELEMENT_COUNT) + 2] = 0.0f;
-
-    call.mesh = &cube4;
-    call.matrices = models;
-    call.colors = colors;
-    call.matrices_count = 7;
-
-    state->renderedObjects += 7;
-
-    return (call);
+    color = vm_v3_zero;
+    speg_draw_call_append(call, &current_transform, &color);
 }
+
+#define MAX_STATIC_INSTANCES 22000
+static float all_static_models[MAX_STATIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_static_colors[MAX_STATIC_INSTANCES * VM_V3_ELEMENT_COUNT];
+static speg_draw_call draw_call_static = {0};
 
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
@@ -524,10 +393,11 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     m4x4 view;
     m4x4 projection_view;
     m4x4 view_simulated;
-    speg_draw_call call;
-    speg_draw_call call2;
-    speg_draw_call call3;
-    speg_draw_call call4;
+    speg_draw_call draw_call_dynamic = {0};
+
+#define MAX_DYNAMIC_INSTANCES 1024
+    float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+    float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 
     assert(memory);
     assert(memory->permanentMemorySize > 0);
@@ -551,6 +421,16 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         state->clearColorG = 0.2f;
         state->clearColorB = 0.2f;
 
+        draw_call_static.mesh = &cube_static;
+        draw_call_static.count_instances_max = array_size(all_static_models);
+        draw_call_static.count_instances = 0;
+        draw_call_static.models = all_static_models;
+        draw_call_static.colors = all_static_colors;
+
+        /* Static scenes */
+        render_coordinate_axis(&draw_call_static);
+        render_cubes_instanced(&draw_call_static, 100.0f);
+
         platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialization cycles: %4d\n", (endCycleCount - startCycleCount));
         platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialized\n");
     }
@@ -559,7 +439,6 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     projection = vm_m4x4_perspective(vm_radf(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
-    projection_view = vm_m4x4_mul(projection, view);
 
     if (input->cameraSimulate.endedDown)
     {
@@ -575,15 +454,25 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         view_simulated = view;
     }
 
-    call = render_coordinate_axis(state);
-    call2 = render_cubes_instanced(state, 100.0f);
-    call3 = render_cubes(projection, &view_simulated, state, input, 20.0f);
-    call4 = render_transformations_test(state);
+    projection_view = vm_m4x4_mul(projection, view);
 
-    platformApi->platform_draw(call.mesh, call.matrices_count, false, call.matrices, call.colors, projection_view.e);
-    platformApi->platform_draw(call2.mesh, call2.matrices_count, false, call2.matrices, call2.colors, projection_view.e);
-    platformApi->platform_draw(call3.mesh, call3.matrices_count, true, call3.matrices, call3.colors, projection_view.e);
-    platformApi->platform_draw(call4.mesh, call4.matrices_count, true, call4.matrices, call4.colors, projection_view.e);
+    (void)view_simulated;
+
+    draw_call_dynamic.mesh = &cube_dynamic;
+    draw_call_dynamic.count_instances_max = array_size(all_dynamic_models);
+    draw_call_dynamic.count_instances = 0;
+    draw_call_dynamic.models = all_dynamic_models;
+    draw_call_dynamic.colors = all_dynamic_colors;
+
+    /* Dynamic scenes */
+    render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f);
+    render_transformations_test(&draw_call_dynamic, state);
+
+    state->renderedObjects = draw_call_static.count_instances + draw_call_dynamic.count_instances;
+
+    /* Draw static and dynamic scenes*/
+    platformApi->platform_draw(draw_call_static.mesh, draw_call_static.count_instances, false, draw_call_static.models, draw_call_static.colors, projection_view.e);
+    platformApi->platform_draw(draw_call_dynamic.mesh, draw_call_dynamic.count_instances, true, draw_call_dynamic.models, draw_call_dynamic.colors, projection_view.e);
 }
 
 #ifdef _WIN32
@@ -641,4 +530,5 @@ DllMainCRTStartup(void)
    ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
    WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
    ------------------------------------------------------------------------------
+
 */

@@ -192,7 +192,6 @@ void shader_load_all(void)
   shaders.instanced = shader_load("test_instanced.vs", "test_instanced.fs");
 }
 
-static unsigned int shader_last_used_program = 0;
 static const int sizeVec3 = sizeof(float) * 3;
 static const int sizeM4x4 = sizeof(float) * 16;
 
@@ -233,7 +232,7 @@ void platform_draw(
 
     /* Instanced mesh */
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 
     /* set attribute pointers 2 - 5 for matrix (4 times vec4) */
     for (int i = 0; i < 4; ++i)
@@ -245,31 +244,26 @@ void platform_draw(
 
     /* Instance color attribute (layout = 6) */
     glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
-    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     glEnableVertexAttribArray(6);
     glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeVec3, (void *)0);
     glVertexAttribDivisor(6, 1);
 
     glBindVertexArray(0);
 
-    mesh->lastInstancedNumberOfObjects = numberOfObjects;
     mesh->initialized = true;
+
+    win32_print_console("[win32] mesh initialized, vao: %i, vbo: %i, ebo: %i, ibo: %i, cbo: %i, face_culling: %s, dynamic: %s\n", mesh->VAO, mesh->VBO, mesh->EBO, mesh->IBO, mesh->CBO, mesh->faceCulling ? "true" : "false", changed ? "true" : "false");
   }
 
   /* Mesh changed */
-  if (mesh->lastInstancedNumberOfObjects != numberOfObjects || changed)
+  if (changed)
   {
-    /*
-    win32_print_console("[win32] update mesh instanced data, VAO: %i, Last no. objects: %i, New no. objects: %i\n", mesh->VAO, mesh->lastInstancedNumberOfObjects, numberOfObjects);
-    */
-    /* Instanced mesh */
     glBindBuffer(GL_ARRAY_BUFFER, mesh->IBO);
     glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeM4x4, &models[0], GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
     glBufferData(GL_ARRAY_BUFFER, numberOfObjects * sizeVec3, &colors[0], GL_DYNAMIC_DRAW);
-
-    mesh->lastInstancedNumberOfObjects = numberOfObjects;
   }
 
   static bool initialized_gl = false;
@@ -278,7 +272,6 @@ void platform_draw(
   if (!initialized_gl)
   {
     glUseProgram(shaders.instanced.program);
-    shader_last_used_program = shaders.instanced.program;
     uniformLocationProjectionView = glGetUniformLocation(shaders.instanced.program, "pv");
     initialized_gl = true;
   }
@@ -286,12 +279,6 @@ void platform_draw(
   if (!mesh->faceCulling)
   {
     glDisable(GL_CULL_FACE);
-  }
-
-  if (shader_last_used_program != shaders.instanced.program)
-  {
-    glUseProgram(shaders.instanced.program);
-    shader_last_used_program = shaders.instanced.program;
   }
 
   glBindVertexArray(mesh->VAO);

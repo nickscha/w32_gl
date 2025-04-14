@@ -80,6 +80,7 @@ typedef unsigned int *PUINT;
 typedef float FLOAT;
 typedef unsigned char GLubyte;
 typedef unsigned int GLenum;
+typedef int GLintptr;
 typedef float GLclampf;
 typedef unsigned int GLuint;
 typedef unsigned int GLbitfield;
