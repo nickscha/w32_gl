@@ -964,7 +964,7 @@ mainCRTStartup(void)
       char buffer[256];
       wsprintfA(buffer, "%4d ms/f, %4d fps, %10d cycles, size: %4d / %4d, %s, %s\n", msPerFrame, fps, cyclesElapsed, width, height, glRenderer, glVersion);
       SetWindowTextA(window, buffer);
-      win32_print_console("[win32] objs: %4d, culled: %4d, occluded: %4d, dcpf: %4d, %4d ms/f, %5d fps, %10d cycles, wireframe(F1) %1d, simCam(F3) %1d, vsync(F4) %1d\n", state->renderedObjects, state->culledObjects, occludedObjectsPerFrame, drawCallsPerFrame, msPerFrame, fps, cyclesElapsed, wireframeMode, simulateCam, vsync);
+      win32_print_console("[win32] objs: %4d, culled: %4d, occluded: %4d, dc/f: %4d, %4d ms/f, %5d fps, %10d cycles, wireframe(F1) %1d, simCam(F3) %1d, vsync(F4) %1d\n", state->renderedObjects, state->culledObjects, occludedObjectsPerFrame, drawCallsPerFrame, msPerFrame, fps, cyclesElapsed, wireframeMode, simulateCam, vsync);
       msPassed = 0;
     }
   }

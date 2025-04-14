@@ -365,7 +365,7 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
             unsigned int green = (color & 0x0000FF00) >> 8;
             unsigned int blue = (color & 0x000000FF);
 
-            v3 targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
+            v3 targetColor = vm_v3_one;
 
             if (i > 0)
             {
@@ -374,6 +374,7 @@ speg_draw_call render_cubes_instanced(speg_state *state, float range)
                 targetPosition.x = vm_randf_range(rangeMin, rangeMax);
                 targetPosition.y = vm_randf_range(rangeMin, rangeMax);
                 targetPosition.z = vm_randf_range(rangeMin, rangeMax);
+                targetColor = vm_v3((float)red / 255.0f, (float)green / 255.0f, (float)blue / 255.0f);
             }
 
             model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
