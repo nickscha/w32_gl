@@ -390,29 +390,30 @@ static speg_draw_call draw_call_dynamic_gui = {0};
 
 void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controller_input *input)
 {
-    float width = 200.0f;
-    float height = 30.0f;
+    float element_z_pos = 0.0f;
+    float element_width = 200.0f;
+    float element_height = 30.0f;
+    float element_width_half = element_width * 0.5f;
+    float element_height_half = element_height * 0.5f;
 
     float screen_width = (float)state->width;
     float screen_height = (float)state->height;
 
-    v3 position = vm_v3(screen_width * 0.5f, screen_height - height, 0.0f);
-    v3 color = vm_v3(1.0f, 1.0f, 1.0f);
+    v3 position = vm_v3(screen_width * 0.5f, screen_height - element_height, element_z_pos);
+    v3 colorDefault = vm_v3(1.0f, 1.0f, 1.0f);
     v3 colorSelected = vm_v3(1.0f, 0.0f, 0.0f);
 
-    m4x4 model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(width, height, 1.0f));
+    m4x4 model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(element_width, element_height, 1.0f));
 
     int mouseX = input->mousePosX;
-    int mouseY = state->height - input->mousePosY; /* Flip Y for OpenGL coords */
-    float halfWidth = width * 0.5f;
-    float halfHeight = height * 0.5f;
+    int mouseY = input->mousePosY; /* Flip Y for OpenGL coords */
 
-    bool inside = (mouseX >= position.x - halfWidth &&
-                   mouseX <= position.x + halfWidth &&
-                   mouseY >= position.y - halfHeight &&
-                   mouseY <= position.y + halfHeight);
+    bool inside = (mouseX >= position.x - element_width_half &&
+                   mouseX <= position.x + element_width_half &&
+                   mouseY >= position.y - element_height_half &&
+                   mouseY <= position.y + element_height_half);
 
-    speg_draw_call_append(call, &model, inside ? &colorSelected : &color);
+    speg_draw_call_append(call, &model, inside ? &colorSelected : &colorDefault);
 }
 
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)

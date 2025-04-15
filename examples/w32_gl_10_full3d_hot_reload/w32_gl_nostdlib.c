@@ -195,6 +195,9 @@ void shader_load_all(void)
 static const int sizeVec3 = sizeof(float) * 3;
 static const int sizeM4x4 = sizeof(float) * 16;
 
+static bool initialized_gl = false;
+static GLint uniformLocationProjectionView = -1;
+
 void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
 {
   if (draw_call->count_instances == 0)
@@ -261,9 +264,6 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
     glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeVec3, &draw_call->colors[0], GL_DYNAMIC_DRAW);
   }
-
-  static bool initialized_gl = false;
-  static GLint uniformLocationProjectionView = -1;
 
   if (!initialized_gl)
   {
@@ -485,7 +485,7 @@ void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_in
     {
       newInput->mousePosX = GET_X_LPARAM(message.lParam);
       oldInput->mousePosX = newInput->mousePosX;
-      newInput->mousePosY = GET_Y_LPARAM(message.lParam);
+      newInput->mousePosY = height - GET_Y_LPARAM(message.lParam);
       oldInput->mousePosY = newInput->mousePosY;
     }
     break;
@@ -902,10 +902,12 @@ mainCRTStartup(void)
     }
 
     FILETIME vs = w32_file_mod_time(shaders.instanced.vsFile);
+    FILETIME fs = w32_file_mod_time(shaders.instanced.fsFile);
 
-    if (CompareFileTime(&vs, &shaders.instanced.vsTime) != 0)
+    if (CompareFileTime(&vs, &shaders.instanced.vsTime) != 0 || CompareFileTime(&fs, &shaders.instanced.fsTime) != 0)
     {
       win32_print_console("%s", "[win32] hot reload shader files\n");
+      initialized_gl = false;
       glDeleteProgram(shaders.instanced.program);
       shader_load_all();
     }
