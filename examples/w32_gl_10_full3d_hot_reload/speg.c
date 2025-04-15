@@ -108,7 +108,7 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     }
     if (input->moveLeft.endedDown)
     {
-        cam->position = vm_v3_sub(cam->position, vm_v3_mulf(vm_v3_normalize(vm_v3_cross(cam->front, cam->up)), movementSpeed));
+        cam->position = vm_v3_sub(cam->position, vm_v3_mulf(cam->right, movementSpeed));
     }
     if (input->moveBackward.endedDown)
     {
@@ -116,15 +116,15 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     }
     if (input->moveRight.endedDown)
     {
-        cam->position = vm_v3_add(cam->position, vm_v3_mulf(vm_v3_normalize(vm_v3_cross(cam->front, cam->up)), movementSpeed));
+        cam->position = vm_v3_add(cam->position, vm_v3_mulf(cam->right, movementSpeed));
     }
     if (input->moveUp.endedDown)
     {
-        cam->position = vm_v3_add(cam->position, vm_v3_mulf(cam->up, movementSpeed));
+        cam->position = vm_v3_add(cam->position, vm_v3_mulf(cam->worldUp, movementSpeed));
     }
     if (input->moveDown.endedDown)
     {
-        cam->position = vm_v3_sub(cam->position, vm_v3_mulf(cam->up, movementSpeed));
+        cam->position = vm_v3_sub(cam->position, vm_v3_mulf(cam->worldUp, movementSpeed));
     }
 
     if (input->mouseAttached)
@@ -143,35 +143,32 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     camera_update_vectors(cam);
 }
 
-static speg_mesh cube_static = {
-    "cube_static",
-    false,
-    true, /* Enable face culling */
-    cube_vertices,
-    sizeof(cube_vertices),
-    cube_indices,
-    sizeof(cube_indices),
-    array_size(cube_indices)};
+#define PROFILE(func_call)                                                       \
+    do                                                                           \
+    {                                                                            \
+        unsigned long __startCycles, __endCycles;                                \
+        double __startTimeNano, __endTimeNano;                                   \
+        (void)__startTimeNano;                                                   \
+        (void)__endTimeNano;                                                     \
+        __startTimeNano = platformApi->platform_perf_current_time_nanoseconds(); \
+        __startCycles = platformApi->platform_perf_current_cycle_count();        \
+        func_call;                                                               \
+        __endCycles = platformApi->platform_perf_current_cycle_count();          \
+        __endTimeNano = platformApi->platform_perf_current_time_nanoseconds();   \
+        platformApi->platform_print_console(                                     \
+            __FILE__,                                                            \
+            __LINE__,                                                            \
+            "[speg-profiler] cycles: %8d, ms: %12s, \"%s\"\n",                   \
+            (__endCycles - __startCycles),                                       \
+            "0.000000",                                                          \
+            #func_call);                                                         \
+    } while (0)
 
-static speg_mesh cube_dynamic = {
-    "cube_dynamic",
-    false,
-    true, /* Enable face culling */
-    cube_vertices,
-    sizeof(cube_vertices),
-    cube_indices,
-    sizeof(cube_indices),
-    array_size(cube_indices)};
+#define SPEG_INIT_MESH(name, culling, verts, indices) {name, false, culling, verts, sizeof(verts), indices, sizeof(indices), array_size(indices)}
 
-static speg_mesh rectangle_static = {
-    "rectangle_static",
-    false,
-    false,
-    rectangle_vertices,
-    sizeof(rectangle_vertices),
-    rectangle_indices,
-    sizeof(rectangle_indices),
-    array_size(rectangle_indices)};
+static speg_mesh cube_static = SPEG_INIT_MESH("cube_static", true, cube_vertices, cube_indices);
+static speg_mesh cube_dynamic = SPEG_INIT_MESH("cube_dynamic", true, cube_vertices, cube_indices);
+static speg_mesh rectangle_static = SPEG_INIT_MESH("rectangle_static", false, rectangle_vertices, rectangle_indices);
 
 void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color)
 {
@@ -202,11 +199,10 @@ void render_coordinate_axis(speg_draw_call *call)
 
     v3 axisPosition = vm_v3_zero;
     m4x4 axisModel = vm_m4x4_translate(vm_m4x4_identity, axisPosition);
-    v3 axisColors[3];   /* X, Y , Z*/
-    v3 axisSizes[3];    /* X, Y , Z*/
-    m4x4 axisModels[3]; /* X, Y , Z*/
 
-    int i;
+    v3 axisColors[3];   /* X, Y , Z */
+    v3 axisSizes[3];    /* X, Y , Z */
+    m4x4 axisModels[3]; /* X, Y , Z */
 
     axisColors[0] = vm_v3(1.0f, 0.0f, 0.0f);
     axisColors[1] = vm_v3(0.0f, 1.0f, 0.0f);
@@ -220,13 +216,34 @@ void render_coordinate_axis(speg_draw_call *call)
     axisModels[1] = vm_m4x4_scale(axisModel, axisSizes[1]);
     axisModels[2] = vm_m4x4_scale(axisModel, axisSizes[2]);
 
-    for (i = 0; i < (int)array_size(axisModels); ++i)
+    speg_draw_call_append(call, &axisModels[0], &axisColors[0]);
+    speg_draw_call_append(call, &axisModels[1], &axisColors[1]);
+    speg_draw_call_append(call, &axisModels[2], &axisColors[2]);
+}
+
+void spawn_random_cube(int i, float range, v3 *position, v3 *color)
+{
+    static const float color_scale = 1.0f / 255.0f;
+    unsigned int c = (i == 0 ? 1 : i) * 10000000;
+    float r = ((float)(((c >> 16) & 0xFF) >> 1)) * color_scale;
+    float g = ((float)((c >> 8) & 0xFF)) * color_scale;
+    float b = ((float)(c & 0xFF)) * color_scale;
+
+    if (i == 0)
     {
-        speg_draw_call_append(call, &axisModels[i], &axisColors[i]);
+        *color = vm_v3_one;
+        *position = vm_v3_zero;
+    }
+    else
+    {
+        *color = vm_v3(r, g, b);
+        position->x = vm_randf_range(-range, range);
+        position->y = vm_randf_range(-range, range);
+        position->z = vm_randf_range(-range, range);
     }
 }
 
-void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *state, speg_controller_input *input, float range)
+void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *state, speg_controller_input *input, float range, camera *cam)
 {
 
 #define NUM_INSTANCED_FRUST_CUBES 1000
@@ -235,36 +252,19 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
     m4x4 projection_view = vm_m4x4_mul(projection, view);
     frustum frustum_planes = vm_frustum_extract_planes(projection_view);
     int i;
-    bool draw;
 
-    const float rangeMin = -range;
-    const float rangeMax = range;
     const v3 rotation_axis = vm_v3_normalize(vm_v3(1.0f, 0.3f, 0.5f));
     const v3 color_red = vm_v3(1.0f, 0.0f, 0.0f);
-    const float color_scale = 1.0f / 255.0f;
 
     vm_seed_lcg = 12345;
 
     for (i = 0; i < numCubes; ++i)
     {
-        unsigned int color = (i == 0 ? 1 : i) * 10000000;
-        float r = ((float)(((color >> 16) & 0xFF) >> 1)) * color_scale;
-        float g = ((float)((color >> 8) & 0xFF)) * color_scale;
-        float b = ((float)(color & 0xFF)) * color_scale;
+        bool draw;
+        v3 targetPosition;
+        v3 targetColor;
 
-        v3 targetPosition = vm_v3_zero;
-        v3 targetColor = vm_v3(r, g, b);
-
-        if (i == 0)
-        {
-            targetColor = vm_v3_one;
-        }
-        else
-        {
-            targetPosition.x = vm_randf_range(rangeMin, rangeMax);
-            targetPosition.y = vm_randf_range(rangeMin, rangeMax);
-            targetPosition.z = vm_randf_range(rangeMin, rangeMax);
-        }
+        spawn_random_cube(i, range, &targetPosition, &targetColor);
 
         /* TODO: epsilon 0.15f is needed because cubes are rotating and its not considered in the frustum check */
         draw = (bool)vm_frustum_is_cube_in(frustum_planes, targetPosition, vm_v3_one, 0.15f);
@@ -283,49 +283,28 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
         /* Finally draw to screen by using platform api */
         if (draw)
         {
-
             /* calculate the model matrix for each object and pass it to shader before drawing */
-            m4x4 model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
-
-            if (i > 0)
-            {
-                model = vm_m4x4_rotate(model, vm_radf(20.0f * (float)i), rotation_axis);
-            }
+            m4x4 model_base = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
+            m4x4 model = (i > 0)
+                             ? vm_m4x4_rotate(model_base, vm_radf(20.0f * (float)i), rotation_axis)
+                             : vm_m4x4_lookAt_model(vm_v3_sub(targetPosition, vm_v3(2.0f, 0.0f, 0.0f)), cam->position, cam->worldUp);
 
             speg_draw_call_append(call, &model, &targetColor);
         }
     }
 }
 
-#define NUM_INSTANCED_CUBES 20000
-static int numCubes = NUM_INSTANCED_CUBES;
-
 void render_cubes_instanced(speg_draw_call *call, float range)
 {
-
     int i;
-    const float color_scale = 1.0f / 255.0f;
-    const float rangeMin = -range;
-    const float rangeMax = range;
 
-    for (i = 0; i < numCubes; ++i)
+    for (i = 0; i < 20000; ++i)
     {
         m4x4 model;
         v3 targetPosition = vm_v3_zero;
         v3 targetColor = vm_v3_one;
 
-        if (i > 0)
-        {
-            unsigned int color = (i == 0 ? 1 : i) * 10000000;
-            float r = ((float)(((color >> 16) & 0xFF) >> 1)) * color_scale;
-            float g = ((float)((color >> 8) & 0xFF)) * color_scale;
-            float b = ((float)(color & 0xFF)) * color_scale;
-
-            targetPosition.x = vm_randf_range(rangeMin, rangeMax);
-            targetPosition.y = vm_randf_range(rangeMin, rangeMax);
-            targetPosition.z = vm_randf_range(rangeMin, rangeMax);
-            targetColor = vm_v3(r, g, b);
-        }
+        spawn_random_cube(i, range, &targetPosition, &targetColor);
 
         model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
 
@@ -408,27 +387,6 @@ static speg_draw_call draw_call_dynamic = {0};
 static float all_dynamic_gui_models[MAX_DYNAMIC_GUI_INSTANCES * VM_M4X4_ELEMENT_COUNT];
 static float all_dynamic_gui_colors[MAX_DYNAMIC_GUI_INSTANCES * VM_V3_ELEMENT_COUNT];
 static speg_draw_call draw_call_dynamic_gui = {0};
-
-#define PROFILE(func_call)                                                       \
-    do                                                                           \
-    {                                                                            \
-        unsigned long __startCycles, __endCycles;                                \
-        double __startTimeNano, __endTimeNano;                                   \
-        (void)__startTimeNano;                                                   \
-        (void)__endTimeNano;                                                     \
-        __startTimeNano = platformApi->platform_perf_current_time_nanoseconds(); \
-        __startCycles = platformApi->platform_perf_current_cycle_count();        \
-        func_call;                                                               \
-        __endCycles = platformApi->platform_perf_current_cycle_count();          \
-        __endTimeNano = platformApi->platform_perf_current_time_nanoseconds();   \
-        platformApi->platform_print_console(                                     \
-            __FILE__,                                                            \
-            __LINE__,                                                            \
-            "[speg-profiler] cycles: %8d, ms: %12s, \"%s\"\n",                   \
-            (__endCycles - __startCycles),                                       \
-            "0.000000",                                                          \
-            #func_call);                                                         \
-    } while (0)
 
 void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controller_input *input)
 {
@@ -537,7 +495,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     draw_call_dynamic_gui.is_2d = true;
 
     /* Dynamic scenes */
-    render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f);
+    render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f, &cam);
     render_transformations_test(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, input);
 
