@@ -390,14 +390,14 @@ static speg_draw_call draw_call_dynamic_gui = {0};
 
 void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controller_input *input)
 {
+    float screen_width = (float)state->width;
+    float screen_height = (float)state->height;
+
     float element_z_pos = 0.0f;
     float element_width = 200.0f;
     float element_height = 30.0f;
     float element_width_half = element_width * 0.5f;
     float element_height_half = element_height * 0.5f;
-
-    float screen_width = (float)state->width;
-    float screen_height = (float)state->height;
 
     v3 position = vm_v3(screen_width * 0.5f, screen_height - element_height, element_z_pos);
     v3 colorDefault = vm_v3(1.0f, 1.0f, 1.0f);
