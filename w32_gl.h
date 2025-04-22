@@ -355,6 +355,7 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define GL_ARRAY_BUFFER 0x8892
 #define GL_STATIC_DRAW 0x88E4
 #define GL_DYNAMIC_DRAW 0x88E8
+#define GL_INT 0x1404
 #define GL_FLOAT 0x1406
 #define GL_FALSE 0
 #define GL_TRIANGLES 0x0004
@@ -375,6 +376,7 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define GL_DEPTH_COMPONENT 0x1902
 #define GL_TEXTURE_2D 0x0DE1
 #define GL_RGBA 0x1908
+#define GL_RED 0x1903
 #define GL_UNSIGNED_BYTE 0x1401
 #define GL_TEXTURE_MIN_FILTER 0x2801
 #define GL_TEXTURE_MAG_FILTER 0x2800
@@ -388,7 +390,16 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define GL_TEXTURE_WRAP_S 0x2802
 #define GL_TEXTURE_WRAP_T 0x2803
 #define GL_CLAMP_TO_BORDER 0x812D
+#define GL_CLAMP_TO_EDGE 0x812F
 #define GL_TEXTURE_BORDER_COLOR 0x1004
+#define GL_TEXTURE0 0x84C0
+#define GL_TEXTURE1 0x84C1
+#define GL_TEXTURE2 0x84C2
+#define GL_TEXTURE3 0x84C3
+#define GL_TEXTURE4 0x84C4
+#define GL_BLEND 0x0BE2
+#define GL_SRC_ALPHA 0x0302
+#define GL_ONE_MINUS_SRC_ALPHA 0x0303
 
 /* WIN32 Function prototyes */
 #ifndef _WINDOWS_
@@ -518,6 +529,8 @@ W32_API(void)
 glEnable(GLenum cap);
 W32_API(void)
 glDisable(GLenum cap);
+W32_API(void)
+glBlendFunc(GLenum sfactor, GLenum dfactor);
 W32_API(void)
 glPolygonMode(GLenum face, GLenum mode);
 W32_API(void)

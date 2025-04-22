@@ -36,7 +36,7 @@ typedef void (*PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
 typedef void (*PFNGLBINDVERTEXARRAYPROC)(GLuint array);
 typedef void (*PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
 typedef void (*PFNGLBUFFERDATAPROC)(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
-typedef void (*PFNGLBUFFERSUBDATAPROC)(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid * data);
+typedef void (*PFNGLBUFFERSUBDATAPROC)(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data);
 typedef void (*PFNGLVERTEXATTRIBPOINTERPROC)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 typedef void (*PFNGLENABLEVERTEXATTRIBARRAYPROC)(GLuint index);
 typedef void (*PFNGLDELETEPROGRAMPROC)(GLuint program);
@@ -64,6 +64,9 @@ typedef void (*PFNGLFRAMEBUFFERRENDERBUFFERPROC)(GLenum target, GLenum attachmen
 typedef GLenum (*PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum target);
 typedef void (*PFNGLDRAWELEMENTSINSTANCEDPROC)(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount);
 typedef void (*PFNGLVERTEXATTRIBDIVISORPROC)(GLuint index, GLuint divisor);
+typedef void (*PFNGLVERTEXATTRIBIPOINTERPROC)(GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+typedef void (*PFNGLUNIFORM1IPROC)(GLint location, GLint v0);
+typedef void (*PFNGLACTIVETEXTUREPROC)(GLenum texture);
 
 static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
 static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
@@ -112,6 +115,9 @@ static PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
 static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
 static PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced;
 static PFNGLVERTEXATTRIBDIVISORPROC glVertexAttribDivisor;
+static PFNGLVERTEXATTRIBIPOINTERPROC glVertexAttribIPointer;
+static PFNGLUNIFORM1IPROC glUniform1i;
+static PFNGLACTIVETEXTUREPROC glActiveTexture;
 
 BOOL w32_gl_init_gl_functions(void)
 {
@@ -141,7 +147,7 @@ BOOL w32_gl_init_gl_functions(void)
   glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)wglGetProcAddress("glBindVertexArray");
   glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
   glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
-  glBufferSubData = (PFNGLBUFFERSUBDATAPROC) wglGetProcAddress("glBufferSubData");
+  glBufferSubData = (PFNGLBUFFERSUBDATAPROC)wglGetProcAddress("glBufferSubData");
   glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
   glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
   glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
@@ -170,6 +176,9 @@ BOOL w32_gl_init_gl_functions(void)
   glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
   glDrawElementsInstanced = (PFNGLDRAWELEMENTSINSTANCEDPROC)wglGetProcAddress("glDrawElementsInstanced");
   glVertexAttribDivisor = (PFNGLVERTEXATTRIBDIVISORPROC)wglGetProcAddress("glVertexAttribDivisor");
+  glVertexAttribIPointer = (PFNGLVERTEXATTRIBIPOINTERPROC)wglGetProcAddress("glVertexAttribIPointer");
+  glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
+  glActiveTexture = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture");
 
   W32_ASSERT(wglChoosePixelFormatARB);
   W32_ASSERT(wglCreateContextAttribsARB);
@@ -219,6 +228,9 @@ BOOL w32_gl_init_gl_functions(void)
   W32_ASSERT(glBindFramebuffer);
   W32_ASSERT(glDrawElementsInstanced);
   W32_ASSERT(glVertexAttribDivisor);
+  W32_ASSERT(glVertexAttribIPointer);
+  W32_ASSERT(glUniform1i);
+  W32_ASSERT(glActiveTexture);
 
 #pragma GCC diagnostic pop
 

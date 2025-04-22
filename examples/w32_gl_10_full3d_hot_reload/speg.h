@@ -57,6 +57,9 @@ typedef struct speg_mesh
     unsigned int *indices;
     long indicesSize;
 
+    float *uvs;
+    long uvsSize;
+
     /* Required for drawing*/
     int indicesCount;
 
@@ -66,6 +69,8 @@ typedef struct speg_mesh
     unsigned int EBO;
     unsigned int IBO;
     unsigned int CBO;
+    unsigned int UBO; /* UV's */
+    unsigned int TBO; /* Texture Index */
 
 } speg_mesh;
 
@@ -74,6 +79,7 @@ typedef struct speg_draw_call
     speg_mesh *mesh;
     float *models;
     float *colors;
+    int *texture_indices;
     int count_instances;
     int count_instances_max;
 
