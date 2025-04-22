@@ -547,16 +547,6 @@ void render_character(speg_draw_call *call, speg_state *state, char character, v
     speg_draw_call_append(call, &model, &color, c);
 }
 
-int speg_strlen(const char *str)
-{
-    int len = 0;
-    while (str[len] != '\0')
-    {
-        len++;
-    }
-    return len;
-}
-
 void generate_random_string(char *str, int length)
 {
     static unsigned long lcg_state = 123456789;
