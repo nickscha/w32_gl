@@ -180,24 +180,82 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     camera_update_vectors(cam);
 }
 
+void speg_float_to_string(float value, char *buffer, int precision)
+{
+    int i;
+    int int_part;
+    char temp[64];
+    int temp_index = 0;
+
+    if (value < 0)
+    {
+        *buffer++ = '-';
+        value = -value;
+    }
+
+    int_part = (int)value;
+    value -= (float)int_part;
+
+    if (int_part == 0)
+    {
+        temp[temp_index++] = '0';
+    }
+    else
+    {
+        while (int_part > 0)
+        {
+            temp[temp_index++] = (char)((int_part % 10) + '0');
+            int_part /= 10;
+        }
+        for (i = 0; i < temp_index / 2; i++)
+        {
+            char t = temp[i];
+            temp[i] = temp[temp_index - i - 1];
+            temp[temp_index - i - 1] = t;
+        }
+    }
+
+    for (i = 0; i < temp_index; ++i)
+    {
+        *buffer++ = temp[i];
+    }
+
+    if (precision > 0)
+    {
+        *buffer++ = '.';
+        while (precision-- > 0)
+        {
+            int digit;
+            value *= 10;
+            digit = (int)value;
+            *buffer++ = (char)(digit + '0');
+            value -= (float)digit;
+        }
+    }
+
+    *buffer = '\0';
+}
+
 #define PROFILE(func_call)                                                       \
     do                                                                           \
     {                                                                            \
+        char floatBuffer[64];                                                    \
         unsigned long __startCycles, __endCycles;                                \
         double __startTimeNano, __endTimeNano;                                   \
-        (void)__startTimeNano;                                                   \
-        (void)__endTimeNano;                                                     \
+        float __timeMs;                                                          \
         __startTimeNano = platformApi->platform_perf_current_time_nanoseconds(); \
         __startCycles = platformApi->platform_perf_current_cycle_count();        \
         func_call;                                                               \
         __endCycles = platformApi->platform_perf_current_cycle_count();          \
         __endTimeNano = platformApi->platform_perf_current_time_nanoseconds();   \
+        __timeMs = (float)((__endTimeNano - __startTimeNano) / 1000000.0);       \
+        speg_float_to_string(__timeMs, floatBuffer, 6);                          \
         platformApi->platform_print_console(                                     \
             __FILE__,                                                            \
             __LINE__,                                                            \
             "[speg-profiler] cycles: %8d, ms: %12s, \"%s\"\n",                   \
             (__endCycles - __startCycles),                                       \
-            "0.000000",                                                          \
+            floatBuffer,                                                         \
             #func_call);                                                         \
     } while (0)
 
