@@ -239,7 +239,7 @@ void speg_float_to_string(float value, char *buffer, int precision)
 #define PROFILE(func_call)                                                       \
     do                                                                           \
     {                                                                            \
-        char floatBuffer[64];                                                    \
+        char floatBuffer[32];                                                    \
         unsigned long __startCycles, __endCycles;                                \
         double __startTimeNano, __endTimeNano;                                   \
         float __timeMs;                                                          \
@@ -519,8 +519,8 @@ void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controll
 
     m4x4 model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(element_width, element_height, 1.0f));
 
-    int mouseX = input->mousePosX;
-    int mouseY = input->mousePosY; /* Flip Y for OpenGL coords */
+    float mouseX = (float)input->mousePosX;
+    float mouseY = (float)input->mousePosY; /* Flip Y for OpenGL coords */
 
     bool inside = (mouseX >= position.x - element_width_half &&
                    mouseX <= position.x + element_width_half &&

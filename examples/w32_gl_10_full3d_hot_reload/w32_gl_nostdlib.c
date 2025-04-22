@@ -251,9 +251,9 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     glGenVertexArrays(1, &mesh->VAO);
     glGenBuffers(1, &mesh->VBO);
     glGenBuffers(1, &mesh->EBO);
+    glGenBuffers(1, &mesh->UBO);
     glGenBuffers(1, &mesh->IBO);
     glGenBuffers(1, &mesh->CBO);
-    glGenBuffers(1, &mesh->UBO);
 
     glBindVertexArray(mesh->VAO);
 
@@ -306,7 +306,7 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
 
     mesh->initialized = true;
 
-    win32_print_console("[win32] mesh initialized id: %-20s, vao: %3i, vbo: %3i, ebo: %3i, ibo: %3i, cbo: %3i, face_culling: %5s, dynamic: %5s, is_2d: %5s\n", mesh->id, mesh->VAO, mesh->VBO, mesh->EBO, mesh->IBO, mesh->CBO, mesh->faceCulling ? "true" : "false", draw_call->changed ? "true" : "false", draw_call->is_2d ? "true" : "false");
+    win32_print_console("[win32] mesh initialized id: %-20s, vao: %3i, vbo: %3i, ebo: %3i, ubo: %3i, ibo: %3i, cbo: %3i, tbo: %3i, face_culling: %5s, dynamic: %5s, is_2d: %5s\n", mesh->id, mesh->VAO, mesh->VBO, mesh->EBO, mesh->UBO, mesh->IBO, mesh->CBO, mesh->TBO, mesh->faceCulling ? "true" : "false", draw_call->changed ? "true" : "false", draw_call->is_2d ? "true" : "false");
   }
 
   /* Mesh changed */
@@ -388,7 +388,7 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
   drawCallsPerFrame++;
 }
 
-double platform_perf_current_time_nanoseconds()
+double platform_perf_current_time_nanoseconds(void)
 {
   static LARGE_INTEGER perfCountFrequency;
   static bool time_initialized = false;
