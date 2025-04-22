@@ -557,19 +557,53 @@ int speg_strlen(const char *str)
     return len;
 }
 
-void render_text(speg_draw_call *call, speg_state *state)
+void generate_random_string(char *str, int length)
+{
+    static unsigned long lcg_state = 123456789;
+    const char printable_ascii_start = 32;
+    const char printable_ascii_end = 126;
+    int i;
+
+    for (i = 0; i < length; ++i)
+    {
+        char random_char;
+
+        lcg_state = lcg_state * 1103515245 + 12345;
+        random_char = (char)(((lcg_state / 65536) % 32768) % (printable_ascii_end - printable_ascii_start + 1)) + printable_ascii_start;
+
+        str[i] = random_char;
+    }
+    str[length] = '\0';
+}
+
+void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *platformApi)
 {
     float scale = 0.8f;
     v2 size = vm_v2(17.0f * scale, 32.0f * scale);
     v3 red = vm_v3(1.0f, 0.0f, 0.0f);
     v3 green = vm_v3(0.0f, 1.0f, 0.0f);
     v3 blue = vm_v3(0.0f, 0.0f, 1.0f);
+    v3 black = vm_v3(0.0f, 0.0f, 0.0f);
 
     int i;
 
-    const char *str = "Hello, world!\ntest_from_pure_c89 nostdlib :)\n!\"%&/()=?{}[]*+,.:,<>@^_|~\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
     float xOffset = 0.0f;
     float yOffset = 0.0f;
+
+    double startTimeNano;
+    double endTimeNano;
+    unsigned long startCycles;
+    unsigned long endCycles;
+    float msPassed;
+    char floatBuffer[32];
+
+    const char *str = "Hello, world!\ntest_from_pure_c89 nostdlib :)\n!\"%&/()=?{}[]*+,.:,<>@^_|~\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    char random_string[17];
+
+    startTimeNano = platformApi->platform_perf_current_time_nanoseconds();
+    startCycles = platformApi->platform_perf_current_cycle_count();
+
+    generate_random_string(random_string, 16);
 
     for (i = 0; str[i] != '\0'; ++i)
     {
@@ -584,6 +618,114 @@ void render_text(speg_draw_call *call, speg_state *state)
         render_character(call, state, c, i % 3 ? green : (i % 5 ? blue : red), size, xOffset, yOffset);
         xOffset += size.x;
     }
+
+    xOffset = 0.0f;
+    yOffset -= 2 * size.y;
+
+    for (i = 0; random_string[i] != '\0'; ++i)
+    {
+        static const float color_scale = 1.0f / 255.0f;
+        unsigned int n = (i == 0 ? 1 : i) * 3000000;
+        float r = ((float)(((n >> 16) & 0xFF) >> 1)) * color_scale;
+        float g = ((float)((n >> 8) & 0xFF)) * color_scale;
+        float b = ((float)(n & 0xFF)) * color_scale;
+        v3 random_color = vm_v3(r, g, b);
+
+        char c = random_string[i];
+        if (c == '\n')
+        {
+            yOffset -= size.y;
+            xOffset = 0.0f;
+            continue;
+        }
+
+        render_character(call, state, c, random_color, size, xOffset, yOffset);
+        xOffset += size.x;
+    }
+
+    endCycles = platformApi->platform_perf_current_cycle_count();
+    endTimeNano = platformApi->platform_perf_current_time_nanoseconds();
+    msPassed = (float)((endTimeNano - startTimeNano) / 1000000.0);
+
+    speg_float_to_string(msPassed, floatBuffer, 6);
+
+    xOffset = 0.0f;
+    yOffset -= 2 * size.y;
+
+    for (i = 0; floatBuffer[i] != '\0'; ++i)
+    {
+        char c = floatBuffer[i];
+        if (c == '\n')
+        {
+            yOffset -= size.y;
+            xOffset = 0.0f;
+            continue;
+        }
+
+        render_character(call, state, c, black, size, xOffset, yOffset);
+        xOffset += size.x;
+    }
+
+    render_character(call, state, ' ', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'm', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 's', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    xOffset = 0.0f;
+    yOffset -= 2 * size.y;
+
+    speg_float_to_string((float)(endCycles - startCycles), floatBuffer, 0);
+
+    for (i = 0; floatBuffer[i] != '\0'; ++i)
+    {
+        char c = floatBuffer[i];
+        if (c == '\n')
+        {
+            yOffset -= size.y;
+            xOffset = 0.0f;
+            continue;
+        }
+
+        render_character(call, state, c, black, size, xOffset, yOffset);
+        xOffset += size.x;
+    }
+
+    render_character(call, state, ' ', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'C', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'P', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'U', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, ' ', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'c', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'y', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'c', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'l', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 'e', black, size, xOffset, yOffset);
+    xOffset += size.x;
+
+    render_character(call, state, 's', black, size, xOffset, yOffset);
+    xOffset += size.x;
 }
 
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
@@ -682,7 +824,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f, &cam);
     render_transformations_test(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, input);
-    render_text(&draw_call_text, state);
+    render_text(&draw_call_text, state, platformApi);
 
     state->renderedObjects =
         draw_call_static.count_instances +
