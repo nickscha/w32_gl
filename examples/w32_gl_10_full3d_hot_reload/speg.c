@@ -236,7 +236,8 @@ void speg_float_to_string(float value, char *buffer, int precision)
     *buffer = '\0';
 }
 
-#define PROFILE(func_call)                                                       \
+#define PROFILE(func_call) PROFILE_WITH_NAME(func_call, #func_call)
+#define PROFILE_WITH_NAME(func_call, name)                                       \
     do                                                                           \
     {                                                                            \
         char floatBuffer[32];                                                    \
@@ -256,7 +257,7 @@ void speg_float_to_string(float value, char *buffer, int precision)
             "[speg-profiler] cycles: %8d, ms: %12s, \"%s\"\n",                   \
             (__endCycles - __startCycles),                                       \
             floatBuffer,                                                         \
-            #func_call);                                                         \
+            name);                                                               \
     } while (0)
 
 #define SPEG_INIT_MESH(name, culling, verts, indices, uvs) {name, false, culling, verts, sizeof(verts), indices, sizeof(indices), uvs, sizeof(uvs), array_size(indices)}
@@ -530,7 +531,7 @@ void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controll
     speg_draw_call_append(call, &model, inside ? &colorSelected : &colorDefault, default_texture_index);
 }
 
-void render_character(speg_draw_call *call, speg_state *state, char character, v3 color, v2 dimensions, float xOffset)
+void render_character(speg_draw_call *call, speg_state *state, char character, v3 color, v2 dimensions, float xOffset, float yOffset)
 {
     float screen_width = (float)state->width;
     float screen_height = (float)state->height;
@@ -539,7 +540,7 @@ void render_character(speg_draw_call *call, speg_state *state, char character, v
     float element_width = dimensions.x;
     float element_height = dimensions.y;
 
-    v3 position = vm_v3((screen_width * 0.5f) + xOffset, screen_height - (4 * element_height), element_z_pos);
+    v3 position = vm_v3((screen_width * 0.5f) + xOffset, screen_height - (4 * element_height) + yOffset, element_z_pos);
     m4x4 model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(element_width, element_height, 1.0f));
 
     int c = character - 32;
@@ -558,21 +559,29 @@ int speg_strlen(const char *str)
 
 void render_text(speg_draw_call *call, speg_state *state)
 {
-    v2 size = vm_v2(17.0f, 32.0f);
+    float scale = 0.8f;
+    v2 size = vm_v2(17.0f * scale, 32.0f * scale);
     v3 red = vm_v3(1.0f, 0.0f, 0.0f);
     v3 green = vm_v3(0.0f, 1.0f, 0.0f);
     v3 blue = vm_v3(0.0f, 0.0f, 1.0f);
 
     int i;
 
-    const char *str = "Hello, world!";
-    const int len = speg_strlen(str);
-    float xOffset = -(((float)len * 0.5f) * size.x);
+    const char *str = "Hello, world!\ntest_from_pure_c89 nostdlib :)\n!\"%&/()=?{}[]*+,.:,<>@^_|~\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    float xOffset = 0.0f;
+    float yOffset = 0.0f;
 
     for (i = 0; str[i] != '\0'; ++i)
     {
         char c = str[i];
-        render_character(call, state, c, i % 3 ? green : (i % 5 ? blue : red), size, xOffset);
+        if (c == '\n')
+        {
+            yOffset -= size.y;
+            xOffset = 0.0f;
+            continue;
+        }
+
+        render_character(call, state, c, i % 3 ? green : (i % 5 ? blue : red), size, xOffset, yOffset);
         xOffset += size.x;
     }
 }
@@ -675,7 +684,11 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     render_gui_rectangle(&draw_call_dynamic_gui, state, input);
     render_text(&draw_call_text, state);
 
-    state->renderedObjects = draw_call_static.count_instances + draw_call_dynamic.count_instances + draw_call_dynamic_gui.count_instances + draw_call_text.count_instances;
+    state->renderedObjects =
+        draw_call_static.count_instances +
+        draw_call_dynamic.count_instances +
+        draw_call_dynamic_gui.count_instances +
+        draw_call_text.count_instances;
 
     /* Draw static and dynamic scenes */
     platformApi->platform_draw(&draw_call_static, projection_view.e);
