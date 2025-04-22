@@ -39,11 +39,6 @@ static unsigned int cube_indices[] = {
     6, 2, 3};
 
 static float cube_uvs[] = {
-    0.0f, 0.0f, 
-    1.0f, 0.0f,  
-    1.0f, 1.0f, 
-    0.0f, 1.0f,  
-
     0.0f, 0.0f,
     1.0f, 0.0f,
     1.0f, 1.0f,
@@ -67,8 +62,12 @@ static float cube_uvs[] = {
     0.0f, 0.0f,
     1.0f, 0.0f,
     1.0f, 1.0f,
-    0.0f, 1.0f
-};
+    0.0f, 1.0f,
+
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f};
 
 static float rectangle_vertices[] = {
     -0.5f, -0.5f, 0.0f, /* Bottom-left */
@@ -489,6 +488,16 @@ void render_character(speg_draw_call *call, speg_state *state, char character, v
     speg_draw_call_append(call, &model, &color, c);
 }
 
+int speg_strlen(const char *str)
+{
+    int len = 0;
+    while (str[len] != '\0')
+    {
+        len++;
+    }
+    return len;
+}
+
 void render_text(speg_draw_call *call, speg_state *state)
 {
     v2 size = vm_v2(17.0f, 32.0f);
@@ -496,31 +505,18 @@ void render_text(speg_draw_call *call, speg_state *state)
     v3 green = vm_v3(0.0f, 1.0f, 0.0f);
     v3 blue = vm_v3(0.0f, 0.0f, 1.0f);
 
-    float xOffset = 0.0f;
+    int i;
 
-    render_character(call, state, 'H', red, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'e', green, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'l', blue, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'l', red, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'o', green, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, ' ', blue, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'W', red, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'o', green, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'r', blue, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'l', red, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, 'd', green, size, xOffset);
-    xOffset += size.x;
-    render_character(call, state, '!', blue, size, xOffset);
+    const char *str = "Hello, world!";
+    const int len = speg_strlen(str);
+    float xOffset = -(((float)len * 0.5f) * size.x);
+
+    for (i = 0; str[i] != '\0'; ++i)
+    {
+        char c = str[i];
+        render_character(call, state, c, i % 3 ? green : (i % 5 ? blue : red), size, xOffset);
+        xOffset += size.x;
+    }
 }
 
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
