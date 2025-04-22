@@ -317,6 +317,9 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh->CBO);
     glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeVec3, &draw_call->colors[0], GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->TBO);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeof(int), draw_call->texture_indices, GL_DYNAMIC_DRAW);
   }
 
   if (!initialized_gl)
@@ -344,6 +347,13 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, font_texture);
+
+    glUniform1i(uniformLocationAtlasTexture, 0);
+    glUniform1i(uniformLocationAtlasRows, 1);
+    glUniform1i(uniformLocationAtlasColumns, 95);
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -361,16 +371,7 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
   }
 
   glBindVertexArray(mesh->VAO);
-
   glUniformMatrix4fv(uniformLocationProjectionView, 1, GL_FALSE, uniformProjectionView);
-
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, font_texture);
-
-  glUniform1i(uniformLocationAtlasTexture, 0);
-  glUniform1i(uniformLocationAtlasRows, 1);
-  glUniform1i(uniformLocationAtlasColumns, 95);
-
   glDrawElementsInstanced(GL_TRIANGLES, mesh->indicesCount, GL_UNSIGNED_INT, 0, draw_call->count_instances);
   glBindVertexArray(0);
 

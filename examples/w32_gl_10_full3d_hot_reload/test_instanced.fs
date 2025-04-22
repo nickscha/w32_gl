@@ -10,13 +10,15 @@ uniform int atlasColumns;
 
 out vec4 FragColor;
 
+/* gamma = 2.0f */
+const float INV_GAMMA = 1.0f / 2.2f;
 
 void main()
 {
     if(vTexIndex == -1) {
-        float gamma = 2.2f;
-        vec3 gammaCorrected = pow(vColor, vec3(1.0f / gamma));
+        vec3 gammaCorrected = pow(vColor, vec3(INV_GAMMA));
         FragColor = vec4(gammaCorrected, 1.0f);
+        return;
     } else {
         // calculate atlas tile UV
         int col = vTexIndex % atlasColumns;
@@ -28,7 +30,7 @@ void main()
         float alpha = texture(atlasTexture, atlasUV).r;
 
         float gamma = 2.2f;
-        vec3 gammaCorrected = pow(vec3(alpha) * vColor, vec3(1.0f / gamma));
+        vec3 gammaCorrected = pow(vec3(alpha) * vColor, vec3(INV_GAMMA));
         FragColor = vec4(gammaCorrected, alpha);
     }
 

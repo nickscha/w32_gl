@@ -39,10 +39,36 @@ static unsigned int cube_indices[] = {
     6, 2, 3};
 
 static float cube_uvs[] = {
+    0.0f, 0.0f, 
+    1.0f, 0.0f,  
+    1.0f, 1.0f, 
+    0.0f, 1.0f,  
+
     0.0f, 0.0f,
     1.0f, 0.0f,
     1.0f, 1.0f,
-    0.0f, 1.0f};
+    0.0f, 1.0f,
+
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f
+};
 
 static float rectangle_vertices[] = {
     -0.5f, -0.5f, 0.0f, /* Bottom-left */
@@ -185,7 +211,7 @@ static speg_mesh rectangle_text = SPEG_INIT_MESH("rectangle_text", false, rectan
 
 static int default_texture_index = -1;
 
-void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color, int *texture_index)
+void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color, int texture_index)
 {
     int m_offset = call->count_instances * VM_M4X4_ELEMENT_COUNT;
     int c_offset = call->count_instances * VM_V3_ELEMENT_COUNT;
@@ -203,7 +229,7 @@ void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color, int *te
     call->colors[c_offset + 0] = color->x;
     call->colors[c_offset + 1] = color->y;
     call->colors[c_offset + 2] = color->z;
-    call->texture_indices[t_offset + 0] = *texture_index;
+    call->texture_indices[t_offset + 0] = texture_index;
 
     call->count_instances += 1;
 }
@@ -233,9 +259,9 @@ void render_coordinate_axis(speg_draw_call *call)
     axisModels[1] = vm_m4x4_scale(axisModel, axisSizes[1]);
     axisModels[2] = vm_m4x4_scale(axisModel, axisSizes[2]);
 
-    speg_draw_call_append(call, &axisModels[0], &axisColors[0], &default_texture_index);
-    speg_draw_call_append(call, &axisModels[1], &axisColors[1], &default_texture_index);
-    speg_draw_call_append(call, &axisModels[2], &axisColors[2], &default_texture_index);
+    speg_draw_call_append(call, &axisModels[0], &axisColors[0], default_texture_index);
+    speg_draw_call_append(call, &axisModels[1], &axisColors[1], default_texture_index);
+    speg_draw_call_append(call, &axisModels[2], &axisColors[2], default_texture_index);
 }
 
 void spawn_random_cube(int i, float range, v3 *position, v3 *color)
@@ -311,7 +337,7 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
                              ? vm_m4x4_rotate(model_base, vm_radf(20.0f * (float)i), rotation_axis)
                              : vm_m4x4_lookAt_model(targetPosition, cam->position, cam->worldUp);
 
-            speg_draw_call_append(call, &model, &targetColor, &default_texture_index);
+            speg_draw_call_append(call, &model, &targetColor, default_texture_index);
         }
     }
 }
@@ -330,7 +356,7 @@ void render_cubes_instanced(speg_draw_call *call, float range)
 
         model = vm_m4x4_translate(vm_m4x4_identity, targetPosition);
 
-        speg_draw_call_append(call, &model, &targetColor, &default_texture_index);
+        speg_draw_call_append(call, &model, &targetColor, default_texture_index);
     }
 }
 
@@ -354,45 +380,45 @@ void render_transformations_test(speg_draw_call *call, speg_state *state)
     vm_tranformation_rotate(&parent, vm_v3(0.0f, 1.0f, 0.0f), vm_radf(rotation));
     current_transform = vm_transformation_matrix(&parent);
     color = vm_v3(1.0f, 0.0f, 0.0f);
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 
     child.position = vm_v3(3.0f, 0.0f, 0.0f);
     child.parent = &parent;
     current_transform = vm_transformation_matrix(&child);
     color = vm_v3(1.0f, 0.8745f, 0.0f);
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 
     child2.position = vm_v3(-3.0f, 0.0f, 0.0f);
     child2.parent = &parent;
     current_transform = vm_transformation_matrix(&child2);
     color = vm_v3(1.0f, 0.8745f, 0.0f);
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 
     child3.position = vm_v3(0.0f, 0.0f, 3.0f);
     child3.parent = &parent;
     current_transform = vm_transformation_matrix(&child3);
     color = vm_v3(1.0f, 0.8745f, 0.0f);
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 
     child4.position = vm_v3(0.0f, 0.0f, -3.0f);
     child4.parent = &parent;
     child4.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 2.0f));
     current_transform = vm_transformation_matrix(&child4);
     color = vm_v3(1.0f, 0.8745f, 0.0f);
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 
     child41.position = vm_v3(0.0f, 0.0f, -2.0f);
     child41.parent = &child4;
     child41.rotation = vm_quat_rotate(vm_v3(0.0f, 1.0f, 0.0f), -vm_radf(rotation * 4.0f));
     current_transform = vm_transformation_matrix(&child41);
     color = vm_v3(0.0f, 1.0f, 0.0f);
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 
     child411.position = vm_v3(0.0f, 0.0f, -2.0f);
     child411.parent = &child41;
     current_transform = vm_transformation_matrix(&child411);
     color = vm_v3_zero;
-    speg_draw_call_append(call, &current_transform, &color, &default_texture_index);
+    speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 }
 
 #define MAX_STATIC_INSTANCES 22000
@@ -444,7 +470,7 @@ void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controll
                    mouseY >= position.y - element_height_half &&
                    mouseY <= position.y + element_height_half);
 
-    speg_draw_call_append(call, &model, inside ? &colorSelected : &colorDefault, &default_texture_index);
+    speg_draw_call_append(call, &model, inside ? &colorSelected : &colorDefault, default_texture_index);
 }
 
 void render_character(speg_draw_call *call, speg_state *state, char character, v3 color, v2 dimensions, float xOffset)
@@ -460,7 +486,7 @@ void render_character(speg_draw_call *call, speg_state *state, char character, v
     m4x4 model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(element_width, element_height, 1.0f));
 
     int c = character - 32;
-    speg_draw_call_append(call, &model, &color, &c);
+    speg_draw_call_append(call, &model, &color, c);
 }
 
 void render_text(speg_draw_call *call, speg_state *state)
