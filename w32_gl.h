@@ -75,6 +75,7 @@ typedef ULONG_PTR DWORD_PTR, *PDWORD_PTR;
 typedef ULONG_PTR SIZE_T, *PSIZE_T;
 typedef DWORD *LPDWORD;
 typedef DWORD ULONG;
+typedef DWORD *PDWORD;
 typedef unsigned short USHORT;
 typedef unsigned int *PUINT;
 typedef float FLOAT;
@@ -248,6 +249,21 @@ typedef struct RAWINPUT
         RAWHID hid;
     } data;
 } RAWINPUT;
+
+typedef struct _PROCESS_MEMORY_COUNTERS_EX
+{
+    DWORD cb;
+    DWORD PageFaultCount;
+    SIZE_T PeakWorkingSetSize;
+    SIZE_T WorkingSetSize;
+    SIZE_T QuotaPeakPagedPoolUsage;
+    SIZE_T QuotaPagedPoolUsage;
+    SIZE_T QuotaPeakNonPagedPoolUsage;
+    SIZE_T QuotaNonPagedPoolUsage;
+    SIZE_T PagefileUsage;
+    SIZE_T PeakPagefileUsage;
+    SIZE_T PrivateUsage;
+} PROCESS_MEMORY_COUNTERS_EX, *PPROCESS_MEMORY_COUNTERS_EX;
 
 typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 
@@ -565,6 +581,13 @@ W32_API(BOOL)
 RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
 W32_API(UINT)
 GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
+W32_API(HANDLE)
+GetCurrentProcess();
+W32_API(BOOL)
+GetProcessHandleCount(HANDLE hProcess, PDWORD pdwHandleCount);
+W32_API(BOOL)
+K32GetProcessMemoryInfo(HANDLE Process, PPROCESS_MEMORY_COUNTERS_EX ppsmemCounters, DWORD cb);
+
 #endif
 
 DWORD w32_strlen(const char *str)
