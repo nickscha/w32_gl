@@ -766,7 +766,9 @@ void render_rigid_cube_simulation(speg_draw_call *call, speg_state *state)
     v3 delta_p;
 
     m4x4 cube_model;
-    v3 cube_color = vm_v3(1.0f, 0.0f, 0.0f);
+    m4x4 text_model;
+    v3 cube_color;
+    v3 text_color = vm_v3_one;
 
     if (!rigid_init)
     {
@@ -805,6 +807,11 @@ void render_rigid_cube_simulation(speg_draw_call *call, speg_state *state)
         rigid_init = false;
     }
 
+    text_model = vm_m4x4_scalef(vm_m4x4_translate(vm_m4x4_identity, vm_v3(cube.position.x, cube.position.y + 1.0f, cube.position.z)), 0.5f);
+
+    speg_draw_call_append(call, &text_model, &text_color, ((int)'V' - 32));
+
+    cube_color = vm_v3(vm_clampf(vm_absf(cube.velocity.y) * 0.5f, 0.1f, 1.0f), 0.0f, 0.0f);
     cube_model = vm_m4x4_translate(vm_m4x4_identity, cube.position);
     speg_draw_call_append(call, &cube_model, &cube_color, default_texture_index);
 }
