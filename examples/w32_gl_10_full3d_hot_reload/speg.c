@@ -574,6 +574,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     v3 green = vm_v3(0.0f, 1.0f, 0.0f);
     v3 blue = vm_v3(0.0f, 0.0f, 1.0f);
     v3 black = vm_v3(0.0f, 0.0f, 0.0f);
+    v3 grey = vm_v3(0.1f, 0.1f, 0.1f);
 
     int i;
 
@@ -587,7 +588,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     float msPassed;
     char floatBuffer[32];
 
-    const char *str = "Hello, world!\ntest_from_pure_c89 nostdlib :)\n!\"%&/()=?{}[]*+,.:,<>@^_|~\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static const char *str = "Hello, world!\ntest_from_pure_c89 nostdlib :)\n!\"%&/()=?{}[]*+,.:,<>@^_|~\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
     char random_string[17];
 
     startTimeNano = platformApi->platform_perf_current_time_nanoseconds();
@@ -605,6 +606,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
             continue;
         }
 
+        render_character(call, state, c, grey, size, xOffset + 1.0f, yOffset - 1.0f);
         render_character(call, state, c, i % 3 ? green : (i % 5 ? blue : red), size, xOffset, yOffset);
         xOffset += size.x;
     }
