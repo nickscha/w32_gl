@@ -25,7 +25,8 @@ Features:
 - **1 memory allocation**: 1 for everything. Just VirtualAlloc once. Arena/Bump Memory is passed to application code.
 - **hot OpenGL shader reloading**: Just edit the GLSL files and the running program will update.
 - **hot application code reloading**: Let the window stay open and edit/save/compile **speg.c** and see changes immediatly without restarting the program.
-- **OpenGL Instanced Rendering**
+- **OpenGL Instanced Rendering**: In the example scene we render ~20800 objects in 4 draw calls. On a NVIDIA RTX 4070 TI with around 9000 FPS (no vsync).
+- **Bitmap Font Rendering**
 - **Frustum Culling**: From my other linear algebra library **vm.h**
 
 Files:
