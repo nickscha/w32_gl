@@ -138,6 +138,7 @@ void camera_update_movement(speg_controller_input *input, camera *cam, float mov
     {
         *cam = camera_init();
         cam->position.z = 13.0f;
+        cam->position.y = 2.0f;
     }
     if (input->moveForward.endedDown)
     {
@@ -320,6 +321,25 @@ void render_coordinate_axis(speg_draw_call *call)
     speg_draw_call_append(call, &axisModels[0], &axisColors[0], default_texture_index);
     speg_draw_call_append(call, &axisModels[1], &axisColors[1], default_texture_index);
     speg_draw_call_append(call, &axisModels[2], &axisColors[2], default_texture_index);
+}
+
+void render_grid(speg_draw_call *call)
+{
+    float grid_line_thickness = 0.01f;
+    int grid_size = 101; /* Uneven for perfect alignment */
+    float grid_line_length = (float)grid_size - 1.0f;
+    v3 grid_color = vm_v3(0.3f, 0.3f, 0.3f);
+
+    int i;
+
+    for (i = 0; i < grid_size; ++i)
+    {
+        float grid_line_pos = (float)(i - (int)((float)grid_size * 0.5f));
+        m4x4 grid_line_model_x = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, vm_v3(0.0f, 0.0f, grid_line_pos)), vm_v3(grid_line_length, grid_line_thickness, grid_line_thickness));
+        m4x4 grid_line_model_z = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, vm_v3(grid_line_pos, 0.0f, 0.0f)), vm_v3(grid_line_thickness, grid_line_thickness, grid_line_length));
+        speg_draw_call_append(call, &grid_line_model_x, &grid_color, default_texture_index);
+        speg_draw_call_append(call, &grid_line_model_z, &grid_color, default_texture_index);
+    }
 }
 
 void spawn_random_cube(int i, float range, v3 *position, v3 *color)
@@ -741,6 +761,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     {
         cam = camera_init();
         cam.position.z = 13.0f;
+        cam.position.y = 2.0f;
 
         memory->initialized = true;
 
@@ -758,6 +779,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
         /* Static scenes */
         PROFILE(render_coordinate_axis(&draw_call_static));
+        PROFILE(render_grid(&draw_call_static));
         PROFILE(render_cubes_instanced(&draw_call_static, 100.0f));
 
         platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialized\n");
