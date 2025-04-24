@@ -740,6 +740,75 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     xOffset += size.x;
 }
 
+typedef struct rigid_body
+{
+    v3 position;
+    v3 velocity;
+    float mass;
+} rigid_body;
+
+#define GRAVITY -9.81f
+#define CUBE_MASS 1.0f
+#define RESTITUTION 0.5f
+#define GROUND_Y 0.0f
+
+void render_rigid_cube_simulation(speg_draw_call *call, speg_state *state)
+{
+    float time_step = (float)state->dt;
+
+    static rigid_body cube;
+    static bool rigid_init;
+
+    static v3 gravity = {0.0f, GRAVITY, 0.0f};
+    static v3 acceleration;
+
+    v3 delta_v;
+    v3 delta_p;
+
+    m4x4 cube_model;
+    v3 cube_color = vm_v3(1.0f, 0.0f, 0.0f);
+
+    if (!rigid_init)
+    {
+        cube.position = vm_v3(3.0f, 5.0f, 5.0f);
+        cube.velocity = vm_v3_zero;
+        cube.mass = CUBE_MASS;
+
+        acceleration = vm_v3_mulf(gravity, 1.0f / cube.mass);
+
+        rigid_init = true;
+    }
+
+    (void)state;
+
+    /* Velocity += Acceleration * dt */
+    delta_v = vm_v3_mulf(acceleration, time_step);
+    cube.velocity = vm_v3_add(cube.velocity, delta_v);
+
+    /* Position += Velocity * dt */
+    delta_p = vm_v3_mulf(cube.velocity, time_step);
+    cube.position = vm_v3_add(cube.position, delta_p);
+
+    /* Ground collision (basic) */
+    if (cube.position.y < GROUND_Y)
+    {
+        cube.position.y = GROUND_Y;
+        if (cube.velocity.y < 0)
+        {
+            cube.velocity.y = -cube.velocity.y * RESTITUTION;
+        }
+    }
+
+    /* Simulation is done cube is fully set so we reset the state and restart the simulation*/
+    if (vm_v3_equals(cube.position, vm_v3(3.0f, 0.0f, 5.0f)) && cube.velocity.y <= 0.08f)
+    {
+        rigid_init = false;
+    }
+
+    cube_model = vm_m4x4_translate(vm_m4x4_identity, cube.position);
+    speg_draw_call_append(call, &cube_model, &cube_color, default_texture_index);
+}
+
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
     static camera cam;
@@ -837,6 +906,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     /* Dynamic scenes */
     render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f, &cam);
     render_transformations_test(&draw_call_dynamic, state);
+    render_rigid_cube_simulation(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, input);
     render_text(&draw_call_text, state, platformApi);
 
