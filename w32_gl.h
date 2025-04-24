@@ -582,7 +582,7 @@ RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UI
 W32_API(UINT)
 GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
 W32_API(HANDLE)
-GetCurrentProcess();
+GetCurrentProcess(void);
 W32_API(BOOL)
 GetProcessHandleCount(HANDLE hProcess, PDWORD pdwHandleCount);
 W32_API(BOOL)
