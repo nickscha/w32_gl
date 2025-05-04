@@ -27,6 +27,7 @@ Features:
 - **hot application code reloading**: Let the window stay open and edit/save/compile **speg.c** and see changes immediatly without restarting the program.
 - **OpenGL Instanced Rendering**: In the example scene we render ~20800 objects in 4 draw calls. On a NVIDIA RTX 4070 TI with around 9000 FPS (no vsync).
 - **Bitmap Font Rendering**
+- **Rigid Body Simulation**
 - **Frustum Culling**: From my other linear algebra library **vm.h**
 
 Files:
