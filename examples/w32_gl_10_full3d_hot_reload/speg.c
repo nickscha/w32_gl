@@ -833,7 +833,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         state->clearColorB = 0.2f;
 
         draw_call_static.mesh = &cube_static;
-        draw_call_static.count_instances_max = array_size(all_static_models);
+        draw_call_static.count_instances_max = MAX_STATIC_INSTANCES;
         draw_call_static.count_instances = 0;
         draw_call_static.models = all_static_models;
         draw_call_static.colors = all_static_colors;
@@ -872,7 +872,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     /* Dynamic Cubes */
     draw_call_dynamic.mesh = &cube_dynamic;
-    draw_call_dynamic.count_instances_max = array_size(all_dynamic_models);
+    draw_call_dynamic.count_instances_max = MAX_DYNAMIC_INSTANCES;
     draw_call_dynamic.count_instances = 0;
     draw_call_dynamic.models = all_dynamic_models;
     draw_call_dynamic.colors = all_dynamic_colors;
@@ -881,7 +881,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     /* 2D GUI Elements */
     draw_call_dynamic_gui.mesh = &rectangle_static;
-    draw_call_dynamic_gui.count_instances_max = array_size(all_dynamic_gui_models);
+    draw_call_dynamic_gui.count_instances_max = MAX_DYNAMIC_GUI_INSTANCES;
     draw_call_dynamic_gui.count_instances = 0;
     draw_call_dynamic_gui.models = all_dynamic_gui_models;
     draw_call_dynamic_gui.colors = all_dynamic_gui_colors;
@@ -891,7 +891,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     /* 3D Text */
     draw_call_text.mesh = &rectangle_text;
-    draw_call_text.count_instances_max = array_size(all_text_models);
+    draw_call_text.count_instances_max = MAX_DYNAMIC_TEXT_INSTANCES;
     draw_call_text.count_instances = 0;
     draw_call_text.models = all_text_models;
     draw_call_text.colors = all_text_colors;
