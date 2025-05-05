@@ -991,6 +991,8 @@ mainCRTStartup(void)
     {
       win32_print_console("%s", "[win32] hot reload code dll\n");
       loadCode();
+
+      /* TODO: should not be reset */
       memory.initialized = false;
     }
 
