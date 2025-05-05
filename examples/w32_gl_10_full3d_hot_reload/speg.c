@@ -588,7 +588,7 @@ void generate_random_string(char *str, int length)
 
 void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *platformApi)
 {
-    float scale = 0.8f;
+    float scale = 0.7f;
     v2 size = vm_v2(17.0f * scale, 32.0f * scale);
     v3 red = vm_v3(1.0f, 0.0f, 0.0f);
     v3 green = vm_v3(0.0f, 1.0f, 0.0f);
@@ -598,7 +598,8 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
 
     int i;
 
-    float xOffset = 0.0f;
+    float xOffsetInitial = 40.0f;
+    float xOffset = xOffsetInitial;
     float yOffset = 0.0f;
 
     double startTimeNano;
@@ -607,6 +608,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     unsigned long endCycles;
     float msPassed;
     char floatBuffer[32];
+    char *textBuffer;
 
     static const char *str = "Hello, world!\ntest_from_pure_c89 nostdlib :)\n!\"%&/()=?{}[]*+,.:,<>@^_|~\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
     char random_string[17];
@@ -622,7 +624,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
         if (c == '\n')
         {
             yOffset -= size.y;
-            xOffset = 0.0f;
+            xOffset = xOffsetInitial;
             continue;
         }
 
@@ -631,7 +633,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
         xOffset += size.x;
     }
 
-    xOffset = 0.0f;
+    xOffset = xOffsetInitial;
     yOffset -= 2 * size.y;
 
     for (i = 0; random_string[i] != '\0'; ++i)
@@ -647,7 +649,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
         if (c == '\n')
         {
             yOffset -= size.y;
-            xOffset = 0.0f;
+            xOffset = xOffsetInitial;
             continue;
         }
 
@@ -661,7 +663,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
 
     speg_float_to_string(msPassed, floatBuffer, 6);
 
-    xOffset = 0.0f;
+    xOffset = xOffsetInitial;
     yOffset -= 2 * size.y;
 
     for (i = 0; floatBuffer[i] != '\0'; ++i)
@@ -670,7 +672,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
         if (c == '\n')
         {
             yOffset -= size.y;
-            xOffset = 0.0f;
+            xOffset = xOffsetInitial;
             continue;
         }
 
@@ -687,9 +689,10 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     render_character(call, state, 's', black, size, xOffset, yOffset);
     xOffset += size.x;
 
-    xOffset = 0.0f;
-    yOffset -= 2 * size.y;
+    xOffset = xOffsetInitial;
+    yOffset -= size.y;
 
+    /* CPU Cycles */
     speg_float_to_string((float)(endCycles - startCycles), floatBuffer, 0);
 
     for (i = 0; floatBuffer[i] != '\0'; ++i)
@@ -698,7 +701,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
         if (c == '\n')
         {
             yOffset -= size.y;
-            xOffset = 0.0f;
+            xOffset = xOffsetInitial;
             continue;
         }
 
@@ -706,38 +709,21 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
         xOffset += size.x;
     }
 
-    render_character(call, state, ' ', black, size, xOffset, yOffset);
-    xOffset += size.x;
+    textBuffer = " CPU cycles";
 
-    render_character(call, state, 'C', black, size, xOffset, yOffset);
-    xOffset += size.x;
+    for (i = 0; textBuffer[i] != '\0'; ++i)
+    {
+        char c = textBuffer[i];
+        if (c == '\n')
+        {
+            yOffset -= size.y;
+            xOffset = xOffsetInitial;
+            continue;
+        }
 
-    render_character(call, state, 'P', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 'U', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, ' ', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 'c', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 'y', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 'c', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 'l', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 'e', black, size, xOffset, yOffset);
-    xOffset += size.x;
-
-    render_character(call, state, 's', black, size, xOffset, yOffset);
-    xOffset += size.x;
+        render_character(call, state, c, black, size, xOffset, yOffset);
+        xOffset += size.x;
+    }
 }
 
 typedef struct rigid_body
@@ -882,6 +868,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
     projection_view = vm_m4x4_mul(projection, view);
 
+    /* Dynamic Cubes */
     draw_call_dynamic.mesh = &cube_dynamic;
     draw_call_dynamic.count_instances_max = array_size(all_dynamic_models);
     draw_call_dynamic.count_instances = 0;
@@ -890,6 +877,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     draw_call_dynamic.texture_indices = all_dynamic_texture_indices;
     draw_call_dynamic.changed = true;
 
+    /* 2D GUI Elements */
     draw_call_dynamic_gui.mesh = &rectangle_static;
     draw_call_dynamic_gui.count_instances_max = array_size(all_dynamic_gui_models);
     draw_call_dynamic_gui.count_instances = 0;
@@ -899,7 +887,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     draw_call_dynamic_gui.changed = true;
     draw_call_dynamic_gui.is_2d = true;
 
-    /* Text */
+    /* 3D Text */
     draw_call_text.mesh = &rectangle_text;
     draw_call_text.count_instances_max = array_size(all_text_models);
     draw_call_text.count_instances = 0;
