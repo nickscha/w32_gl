@@ -107,6 +107,37 @@ VM_API VM_INLINE float vm_clampf(float value, float min, float max)
     return (vm_maxf(min, vm_minf(max, value)));
 }
 
+VM_API VM_INLINE float vm_clamp01f(float value)
+{
+    return (vm_maxf(0.0f, vm_minf(1.0f, value)));
+}
+
+VM_API VM_INLINE float vm_smoothstep(float x)
+{
+    if (x <= 0.0f)
+    {
+        return (0.0f);
+    }
+    if (x >= 1.0f)
+    {
+        return (1.0f);
+    }
+    return ((3.0f * x * x) - (2.0f * x * x * x));
+}
+
+VM_API VM_INLINE float vm_smootherstep(float x)
+{
+    if (x <= 0.0f)
+    {
+        return (0.0f);
+    }
+    if (x >= 1.0f)
+    {
+        return (1.0f);
+    }
+    return ((10.0f * x * x * x) - (15.0f * x * x * x * x) + (6.0f * x * x * x * x * x));
+}
+
 VM_API VM_INLINE float vm_floorf(float x)
 {
     int i = (int)x;
@@ -146,27 +177,48 @@ VM_API VM_INLINE float vm_invsqrt(float number)
 #pragma warning(pop)
 #endif
 
-VM_API VM_INLINE float vm_power(float base, int exp)
+VM_API VM_INLINE float vm_sqrtf(float x)
 {
-    float result = 1.0f;
+    return (x * vm_invsqrt(x));
+}
+
+VM_API VM_INLINE float vm_ln_approx(float x)
+{
+    float y = (x - 1.0f) / (x + 1.0f);
+    float y2 = y * y;
+    return (2.0f * (y + (y2 * y) / 3.0f));
+}
+
+VM_API VM_INLINE float vm_exp_approx(float x)
+{
+    float term = 1.0f;
+    float sum = 1.0f;
     int i;
-
-    if (exp < 0)
+    for (i = 1; i <= 10; ++i)
     {
-        for (i = 0; i < -exp; ++i)
-        {
-            result /= base;
-        }
+        term *= x / (float)i;
+        sum += term;
     }
-    else
+    return (sum);
+}
+
+VM_API VM_INLINE float vm_powf(float base, float exponent)
+{
+    if (base == 0.0f)
     {
-        for (i = 0; i < exp; ++i)
-        {
-            result *= base;
-        }
+        return (0.0f);
+    }
+    if (exponent == 0.0f)
+    {
+        return (1.0f);
+    }
+    if (exponent == 1.0f)
+    {
+        return (base);
     }
 
-    return (result);
+    /* Approximate using: base^exp = exp(exp * ln(base)) */
+    return (vm_exp_approx(exponent * vm_ln_approx(base)));
 }
 
 VM_API VM_INLINE float vm_fmodf(float x, float y)
@@ -183,6 +235,37 @@ VM_API VM_INLINE float vm_fmodf(float x, float y)
     quotient = vm_floorf(x / y);
 
     return ((-quotient * y) + x);
+}
+
+VM_API VM_INLINE float vm_acosf(float x)
+{
+    int negate;
+    float ret;
+    float inv_sqrt;
+
+    /* Clamp input to domain */
+    if (x >= 1.0f)
+    {
+        return 0.0f;
+    }
+    if (x <= -1.0f)
+    {
+        return 3.14159265f;
+    }
+
+    negate = x < 0.0f ? 1 : 0;
+    x = x < 0.0f ? -x : x;
+
+    /* Polynomial approximation for acos in range [0, 1) */
+    ret = -0.0187293f;
+    ret = ret * x + 0.0742610f;
+    ret = ret * x - 0.2121144f;
+    ret = ret * x + 1.5707288f;
+
+    inv_sqrt = vm_invsqrt(1.0f - x);
+    ret *= inv_sqrt;
+
+    return (negate ? 3.14159265f - ret : ret);
 }
 
 #define VM_LUT_SIZE 256
@@ -260,6 +343,254 @@ VM_API VM_INLINE float vm_absf(float x)
 }
 
 /* #############################################################################
+ * # Easing Functions
+ * #############################################################################
+ */
+VM_API VM_INLINE float vm_ease_in_sine(float t)
+{
+    return (1.0f - vm_cosf((t * VM_PI) / 2.0f));
+}
+
+VM_API VM_INLINE float vm_ease_out_sine(float t)
+{
+    return (vm_sinf((t * VM_PI) / 2.0f));
+}
+
+VM_API VM_INLINE float vm_ease_in_out_sine(float t)
+{
+    return (-0.5f * (vm_cosf(VM_PI * t) - 1.0f));
+}
+
+VM_API VM_INLINE float vm_ease_in_quad(float t)
+{
+    return (t * t);
+}
+
+VM_API VM_INLINE float vm_ease_out_quad(float t)
+{
+    return (t * (2.0f - t));
+}
+
+VM_API VM_INLINE float vm_ease_in_out_quad(float t)
+{
+    if (t < 0.5f)
+    {
+        return (2.0f * t * t);
+    }
+    return (-1.0f + (4.0f - 2.0f * t) * t);
+}
+
+VM_API VM_INLINE float vm_ease_in_cubic(float t)
+{
+    return (t * t * t);
+}
+
+VM_API VM_INLINE float vm_ease_out_cubic(float t)
+{
+    t -= 1.0f;
+    return (t * t * t + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_in_out_cubic(float t)
+{
+    if (t < 0.5f)
+    {
+        return (4.0f * t * t * t);
+    }
+    t -= 1.0f;
+    return (4.0f * t * t * t + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_in_quart(float t)
+{
+    return (t * t * t * t);
+}
+
+VM_API VM_INLINE float vm_ease_out_quart(float t)
+{
+    t -= 1.0f;
+    return (1.0f - t * t * t * t);
+}
+
+VM_API VM_INLINE float vm_ease_in_out_quart(float t)
+{
+    if (t < 0.5f)
+    {
+        return (8.0f * t * t * t * t);
+    }
+    t -= 1.0f;
+    return (1.0f - 8.0f * t * t * t * t);
+}
+
+VM_API VM_INLINE float vm_ease_in_quint(float t)
+{
+    return (t * t * t * t * t);
+}
+
+VM_API VM_INLINE float vm_ease_out_quint(float t)
+{
+    t -= 1.0f;
+    return (t * t * t * t * t + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_in_out_quint(float t)
+{
+    if (t < 0.5f)
+    {
+        return (16.0f * t * t * t * t * t);
+    }
+    t -= 1.0f;
+    return (16.0f * t * t * t * t * t + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_in_expo(float t)
+{
+    return (t == 0.0f ? 0.0f : vm_powf(2.0f, 10.0f * (t - 1.0f)));
+}
+
+VM_API VM_INLINE float vm_ease_out_expo(float t)
+{
+    return (t == 1.0f ? 1.0f : 1.0f - vm_powf(2.0f, -10.0f * t));
+}
+
+VM_API VM_INLINE float vm_ease_in_out_expo(float t)
+{
+    if (t == 0.0f)
+    {
+        return (0.0f);
+    }
+    if (t == 1.0f)
+    {
+        return (1.0f);
+    }
+    if (t < 0.5f)
+    {
+        return (0.5f * vm_powf(2.0f, 20.0f * t - 10.0f));
+    }
+    return (1.0f - 0.5f * vm_powf(2.0f, -20.0f * t + 10.0f));
+}
+
+VM_API VM_INLINE float vm_ease_in_circ(float t)
+{
+    return (1.0f - vm_sqrtf(1.0f - t * t));
+}
+
+VM_API VM_INLINE float vm_ease_out_circ(float t)
+{
+    t -= 1.0f;
+    return (vm_sqrtf(1.0f - t * t));
+}
+
+VM_API VM_INLINE float vm_ease_in_out_circ(float t)
+{
+    if (t < 0.5f)
+    {
+        return (0.5f * (1.0f - vm_sqrtf(1.0f - 4.0f * t * t)));
+    }
+    t = t * 2.0f - 2.0f;
+    return (0.5f * (vm_sqrtf(1.0f - t * t) + 1.0f));
+}
+
+#define VM_EASE_BACK_C1 1.70158f
+#define VM_EASE_BACK_C2 (VM_EASE_BACK_C1 * 1.525f)
+
+VM_API VM_INLINE float vm_ease_in_back(float t)
+{
+    return (t * t * ((VM_EASE_BACK_C1 + 1.0f) * t - VM_EASE_BACK_C1));
+}
+
+VM_API VM_INLINE float vm_ease_out_back(float t)
+{
+    t -= 1.0f;
+    return (t * t * ((VM_EASE_BACK_C1 + 1.0f) * t + VM_EASE_BACK_C1) + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_in_out_back(float t)
+{
+    if (t < 0.5f)
+    {
+        t *= 2.0f;
+        return (0.5f * (t * t * ((VM_EASE_BACK_C2 + 1.0f) * t - VM_EASE_BACK_C2)));
+    }
+    else
+    {
+        t = t * 2.0f - 2.0f;
+        return (0.5f * (t * t * ((VM_EASE_BACK_C2 + 1.0f) * t + VM_EASE_BACK_C2) + 2.0f));
+    }
+}
+
+#define VM_EASE_ELASTIC_C4 (2.0f * VM_PI / 3.0f)
+#define VM_EASE_ELASTIC_C5 (2.0f * VM_PI / 4.5f)
+
+VM_API VM_INLINE float vm_ease_in_elastic(float t)
+{
+    if (t == 0.0f)
+        return (0.0f);
+    if (t == 1.0f)
+        return (1.0f);
+    return (-vm_powf(2.0f, 10.0f * (t - 1.0f)) * vm_sinf((t - 1.0f) * VM_EASE_ELASTIC_C4));
+}
+
+VM_API VM_INLINE float vm_ease_out_elastic(float t)
+{
+    if (t == 0.0f)
+        return (0.0f);
+    if (t == 1.0f)
+        return (1.0f);
+    return (vm_powf(2.0f, -10.0f * t) * vm_sinf((t * 1.0f - 0.075f) * VM_EASE_ELASTIC_C4) + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_in_out_elastic(float t)
+{
+    if (t == 0.0f)
+        return (0.0f);
+    if (t == 1.0f)
+        return (1.0f);
+    if (t < 0.5f)
+    {
+        return (-0.5f * vm_powf(2.0f, 20.0f * t - 10.0f) * vm_sinf((20.0f * t - 11.125f) * VM_EASE_ELASTIC_C5));
+    }
+    return (0.5f * vm_powf(2.0f, -20.0f * t + 10.0f) * vm_sinf((20.0f * t - 11.125f) * VM_EASE_ELASTIC_C5) + 1.0f);
+}
+
+VM_API VM_INLINE float vm_ease_out_bounce(float t)
+{
+    if (t < (1.0f / 2.75f))
+    {
+        return (7.5625f * t * t);
+    }
+    else if (t < (2.0f / 2.75f))
+    {
+        t -= 1.5f / 2.75f;
+        return (7.5625f * t * t + 0.75f);
+    }
+    else if (t < (2.5f / 2.75f))
+    {
+        t -= 2.25f / 2.75f;
+        return (7.5625f * t * t + 0.9375f);
+    }
+    else
+    {
+        t -= 2.625f / 2.75f;
+        return (7.5625f * t * t + 0.984375f);
+    }
+}
+
+VM_API VM_INLINE float vm_ease_in_bounce(float t)
+{
+    return (1.0f - vm_ease_out_bounce(1.0f - t));
+}
+
+VM_API VM_INLINE float vm_ease_in_out_bounce(float t)
+{
+    if (t < 0.5f)
+    {
+        return (0.5f * vm_ease_in_bounce(t * 2.0f));
+    }
+    return (0.5f * vm_ease_out_bounce(t * 2.0f - 1.0f) + 0.5f);
+}
+
+/* #############################################################################
  * # VECTOR 2 FUNCTIONS
  * #############################################################################
  */
@@ -280,6 +611,16 @@ VM_API VM_INLINE v2 vm_v2(float x, float y)
 
     result.x = x;
     result.y = y;
+
+    return (result);
+}
+
+VM_API VM_INLINE v2 vm_v2f(float c)
+{
+    v2 result;
+
+    result.x = c;
+    result.y = c;
 
     return (result);
 }
@@ -408,6 +749,17 @@ VM_API VM_INLINE v3 vm_v3(float x, float y, float z)
     result.x = x;
     result.y = y;
     result.z = z;
+
+    return (result);
+}
+
+VM_API VM_INLINE v3 vm_v3f(float c)
+{
+    v3 result;
+
+    result.x = c;
+    result.y = c;
+    result.z = c;
 
     return (result);
 }
@@ -556,6 +908,31 @@ VM_API VM_INLINE float vm_v3_length_manhatten(v3 start, v3 end, float unit)
     return ((vm_absf(start.x - end.x) + vm_absf(start.y - end.y) + vm_absf(start.z - end.z)) / (unit == 0.0f ? 1.0f : unit));
 }
 
+VM_API VM_INLINE v3 vm_v3_reflect(v3 incident, v3 normal)
+{
+    float dot = vm_v3_dot(incident, normal);
+    return (vm_v3_sub(incident, vm_v3_mulf(normal, 2.0f * dot)));
+}
+
+VM_API VM_INLINE v3 vm_v3_project(v3 a, v3 b)
+{
+    float dotAB = vm_v3_dot(a, b);
+    float dotBB = vm_v3_dot(b, b);
+    return (vm_v3_mulf(b, dotAB / dotBB));
+}
+
+VM_API VM_INLINE float vm_v3_angle(v3 a, v3 b)
+{
+    float dot = vm_v3_dot(vm_v3_normalize(a), vm_v3_normalize(b));
+    return (vm_acosf(vm_clampf(dot, -1.0f, 1.0f)));
+}
+
+VM_API VM_INLINE float vm_v3_distance(v3 a, v3 b)
+{
+    v3 d = vm_v3_sub(a, b);
+    return (vm_sqrtf(vm_v3_dot(d, d)));
+}
+
 /* #############################################################################
  * # VECTOR 4 FUNCTIONS
  * #############################################################################
@@ -581,6 +958,18 @@ VM_API VM_INLINE v4 vm_v4(float x, float y, float z, float w)
     result.y = y;
     result.z = z;
     result.w = w;
+
+    return (result);
+}
+
+VM_API VM_INLINE v4 vm_v4f(float c)
+{
+    v4 result;
+
+    result.x = c;
+    result.y = c;
+    result.z = c;
+    result.w = c;
 
     return (result);
 }
@@ -1059,9 +1448,26 @@ VM_API VM_INLINE quat vm_quat(float x, float y, float z, float w)
     return (result);
 }
 
+VM_API VM_INLINE quat vm_quatf(float c)
+{
+    quat result;
+
+    result.x = c;
+    result.y = c;
+    result.z = c;
+    result.w = c;
+
+    return (result);
+}
+
 VM_API VM_INLINE float *vm_quat_data(quat *a)
 {
     return ((float *)a);
+}
+
+VM_API VM_INLINE int vm_quat_equals(quat a, quat b)
+{
+    return (((a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w)) ? 1 : 0);
 }
 
 VM_API VM_INLINE quat vm_quat_rotate(v3 axis, float angle)
@@ -1418,7 +1824,8 @@ VM_API VM_INLINE int vm_frustum_is_sphere_in(frustum frustum, v3 center, float r
 
     for (i = 0; i < VM_FRUSTUM_PLANE_SIZE; ++i)
     {
-        float distance = vm_v3_dot(vm_v3(frustum_data[i].x, frustum_data[i].y, frustum_data[i].z), center) + frustum_data[i].w;
+        v3 frustum_plane_pos = vm_v3(frustum_data[i].x, frustum_data[i].y, frustum_data[i].z);
+        float distance = vm_v3_dot(frustum_plane_pos, center) + frustum_data[i].w;
 
         if (distance < -radius)
         {
