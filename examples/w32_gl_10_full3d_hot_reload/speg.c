@@ -261,13 +261,6 @@ void speg_float_to_string(float value, char *buffer, int precision)
             name);                                                               \
     } while (0)
 
-#define SPEG_INIT_MESH(name, culling, verts, indices, uvs) {name, false, culling, verts, sizeof(verts), indices, sizeof(indices), uvs, sizeof(uvs), array_size(indices)}
-
-static speg_mesh cube_static = SPEG_INIT_MESH("cube_static", true, cube_vertices, cube_indices, cube_uvs);
-static speg_mesh cube_dynamic = SPEG_INIT_MESH("cube_dynamic", true, cube_vertices, cube_indices, cube_uvs);
-static speg_mesh rectangle_static = SPEG_INIT_MESH("rectangle_static", false, rectangle_vertices, rectangle_indices, rectangle_uvs);
-static speg_mesh rectangle_text = SPEG_INIT_MESH("rectangle_text", false, rectangle_vertices, rectangle_indices, rectangle_uvs);
-
 static int default_texture_index = -1;
 
 void speg_draw_call_append(speg_draw_call *call, m4x4 *model, v3 *color, int texture_index)
@@ -498,30 +491,6 @@ void render_transformations_test(speg_draw_call *call, speg_state *state)
     color = vm_v3_zero;
     speg_draw_call_append(call, &current_transform, &color, default_texture_index);
 }
-
-#define MAX_STATIC_INSTANCES 22000
-static float all_static_models[MAX_STATIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
-static float all_static_colors[MAX_STATIC_INSTANCES * VM_V3_ELEMENT_COUNT];
-static int all_static_texture_indices[MAX_STATIC_INSTANCES];
-static speg_draw_call draw_call_static = {0};
-
-#define MAX_DYNAMIC_INSTANCES 1024
-static float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
-static float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
-static int all_dynamic_texture_indices[MAX_DYNAMIC_INSTANCES];
-static speg_draw_call draw_call_dynamic = {0};
-
-#define MAX_DYNAMIC_GUI_INSTANCES 128
-static float all_dynamic_gui_models[MAX_DYNAMIC_GUI_INSTANCES * VM_M4X4_ELEMENT_COUNT];
-static float all_dynamic_gui_colors[MAX_DYNAMIC_GUI_INSTANCES * VM_V3_ELEMENT_COUNT];
-static int all_dynamic_gui_texture_indices[MAX_DYNAMIC_GUI_INSTANCES];
-static speg_draw_call draw_call_dynamic_gui = {0};
-
-#define MAX_DYNAMIC_TEXT_INSTANCES 1024
-static float all_text_models[MAX_DYNAMIC_TEXT_INSTANCES * VM_M4X4_ELEMENT_COUNT];
-static float all_text_colors[MAX_DYNAMIC_TEXT_INSTANCES * VM_V3_ELEMENT_COUNT];
-static int all_text_indices[MAX_DYNAMIC_TEXT_INSTANCES];
-static speg_draw_call draw_call_text = {0};
 
 void render_gui_rectangle(speg_draw_call *call, speg_state *state, speg_controller_input *input)
 {
@@ -800,6 +769,39 @@ void render_rigid_cube_simulation(speg_draw_call *call, speg_state *state)
     text_model = vm_m4x4_scalef(vm_m4x4_translate(vm_m4x4_identity, vm_v3(cube.position.x, cube.position.y + 1.0f, cube.position.z)), 0.5f);
     speg_draw_call_append(call, &text_model, &text_color, ((int)'V' - 32));
 }
+
+/* Draw call batching groups */
+#define MAX_STATIC_INSTANCES 22000
+static float all_static_models[MAX_STATIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_static_colors[MAX_STATIC_INSTANCES * VM_V3_ELEMENT_COUNT];
+static int all_static_texture_indices[MAX_STATIC_INSTANCES];
+static speg_draw_call draw_call_static = {0};
+
+#define MAX_DYNAMIC_INSTANCES 1024
+static float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
+static int all_dynamic_texture_indices[MAX_DYNAMIC_INSTANCES];
+static speg_draw_call draw_call_dynamic = {0};
+
+#define MAX_DYNAMIC_GUI_INSTANCES 128
+static float all_dynamic_gui_models[MAX_DYNAMIC_GUI_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_dynamic_gui_colors[MAX_DYNAMIC_GUI_INSTANCES * VM_V3_ELEMENT_COUNT];
+static int all_dynamic_gui_texture_indices[MAX_DYNAMIC_GUI_INSTANCES];
+static speg_draw_call draw_call_dynamic_gui = {0};
+
+#define MAX_DYNAMIC_TEXT_INSTANCES 1024
+static float all_text_models[MAX_DYNAMIC_TEXT_INSTANCES * VM_M4X4_ELEMENT_COUNT];
+static float all_text_colors[MAX_DYNAMIC_TEXT_INSTANCES * VM_V3_ELEMENT_COUNT];
+static int all_text_indices[MAX_DYNAMIC_TEXT_INSTANCES];
+static speg_draw_call draw_call_text = {0};
+
+/* MESH definition for each speg_draw_call */
+#define SPEG_INIT_MESH(name, culling, verts, indices, uvs) {name, false, culling, verts, sizeof(verts), indices, sizeof(indices), uvs, sizeof(uvs), array_size(indices)}
+
+static speg_mesh cube_static = SPEG_INIT_MESH("cube_static", true, cube_vertices, cube_indices, cube_uvs);
+static speg_mesh cube_dynamic = SPEG_INIT_MESH("cube_dynamic", true, cube_vertices, cube_indices, cube_uvs);
+static speg_mesh rectangle_static = SPEG_INIT_MESH("rectangle_static", false, rectangle_vertices, rectangle_indices, rectangle_uvs);
+static speg_mesh rectangle_text = SPEG_INIT_MESH("rectangle_text", false, rectangle_vertices, rectangle_indices, rectangle_uvs);
 
 void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
 {
