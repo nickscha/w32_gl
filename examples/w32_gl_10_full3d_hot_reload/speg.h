@@ -137,6 +137,7 @@ typedef struct speg_controller_input
             speg_controller_state moveUp;
             speg_controller_state moveDown;
 
+            /* Debug / Dev commands */
             speg_controller_state cameraSimulate;
             speg_controller_state cameraResetPosition;
 
