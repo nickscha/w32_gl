@@ -62,8 +62,8 @@ void rigid_body_apply_force_at_position(rigid_body *rb, v3 force, v3 position)
 
 void rigid_body_integrate(rigid_body *rb, float dt)
 {
-    float invMass = 1.0f / rb->mass;
-    float invInertia = 1.0f / rb->inertia;
+    float invMass = rb->mass > 0.0f ? (1.0f / rb->mass) : 0.0f;
+    float invInertia = rb->inertia > 0.0f ? (1.0f / rb->inertia) : 0.0f;
 
     v3 acceleration = vm_v3_mulf(rb->force, invMass);
     v3 angularAcceleration;
