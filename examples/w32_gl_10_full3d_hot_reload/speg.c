@@ -1,5 +1,6 @@
 #include "speg.h"
 #include "vm.h"
+#include "rigid_body.h"
 
 static float cube_vertices[] = {
     -0.5f, -0.5f, -0.5f, /* Bottom-left back */
@@ -695,79 +696,255 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     }
 }
 
-typedef struct rigid_body
+float simple_power_curve_evaluate(float normRPM)
 {
-    v3 position;
-    v3 velocity;
-    float mass;
-} rigid_body;
+    return (400.0f * (1.0f - normRPM));
+}
 
-#define GRAVITY -9.81f
-#define CUBE_MASS 1.0f
-#define RESTITUTION 0.5f
-#define GROUND_Y 0.0f
-
-void render_rigid_cube_simulation(speg_draw_call *call, speg_state *state)
+void render_vector(speg_draw_call *call, v3 base_position, v3 vector, v3 color)
 {
-    float time_step = (float)state->dt;
+    float line_thickness = 0.04f;
+    float length = vm_v3_length(vector);
+    v3 dir;
+    v3 up;
+    v3 right;
+    v3 forward;
+    v3 scale;
+    v3 midpoint;
+    m4x4 rotation;
+    m4x4 scale_matrix;
+    m4x4 translation;
+    m4x4 model;
 
-    static rigid_body cube;
-    static bool rigid_init;
+    if (length < 1e-6f)
+        return;
 
-    static v3 gravity = {0.0f, GRAVITY, 0.0f};
-    static v3 acceleration;
+    dir = vm_v3_normalize(vector);
+    up = dir;
 
-    v3 delta_v;
-    v3 delta_p;
+    right = vm_v3_cross((vm_absf(up.y) < 0.999f ? vm_v3_up : vm_v3_forward), up);
+    right = vm_v3_normalize(right);
+    forward = vm_v3_cross(up, right);
 
-    m4x4 cube_model;
-    m4x4 text_model;
-    v3 cube_color;
-    v3 text_color = vm_v3_one;
+    rotation = vm_m4x4_identity;
+    rotation.e[VM_M4X4_AT(0, 0)] = right.x;
+    rotation.e[VM_M4X4_AT(1, 0)] = right.y;
+    rotation.e[VM_M4X4_AT(2, 0)] = right.z;
 
-    if (!rigid_init)
+    rotation.e[VM_M4X4_AT(0, 1)] = up.x;
+    rotation.e[VM_M4X4_AT(1, 1)] = up.y;
+    rotation.e[VM_M4X4_AT(2, 1)] = up.z;
+
+    rotation.e[VM_M4X4_AT(0, 2)] = forward.x;
+    rotation.e[VM_M4X4_AT(1, 2)] = forward.y;
+    rotation.e[VM_M4X4_AT(2, 2)] = forward.z;
+
+    scale = vm_v3(line_thickness, length, line_thickness);
+    scale_matrix = vm_m4x4_scale(vm_m4x4_identity, scale);
+
+    midpoint = vm_v3_add(base_position, vm_v3_mulf(vector, 0.5f));
+    translation = vm_m4x4_translate(vm_m4x4_identity, midpoint);
+
+    model = vm_m4x4_mul(translation, vm_m4x4_mul(rotation, scale_matrix));
+
+    speg_draw_call_append(call, &model, &color, default_texture_index);
+}
+
+void wheel_update(
+    rigid_body *car,
+    transformation *wheel,
+    float dt,
+    float restDist,
+    float rayDist,
+    float spring_strength,
+    float spring_damper,
+    float wheel_grip_factor,
+    float wheel_mass,
+    float acceleration_input,
+    float car_top_speed)
+{
+    v3 wheel_position = wheel->position;
+    v3 wheel_world_vel = rigid_body_point_velocity(car, wheel_position);
+
+    /* Force 1: calculate suspension force*/
     {
-        cube.position = vm_v3(3.0f, 5.0f, 5.0f);
-        cube.velocity = vm_v3_zero;
-        cube.mass = CUBE_MASS;
+        /* world-space direction of the spring force */
+        v3 spring_dir = vm_transformation_up(wheel);
 
-        acceleration = vm_v3_mulf(gravity, 1.0f / cube.mass);
+        float offset = restDist - rayDist;
+        float velocity = vm_v3_dot(spring_dir, wheel_world_vel);
+        float force = (offset * spring_strength) - (velocity * spring_damper);
 
-        rigid_init = true;
+        v3 final_force = vm_v3_mulf(spring_dir, force);
+
+        rigid_body_apply_force_at_position(car, final_force, wheel_position);
     }
 
-    (void)state;
-
-    /* Velocity += Acceleration * dt */
-    delta_v = vm_v3_mulf(acceleration, time_step);
-    cube.velocity = vm_v3_add(cube.velocity, delta_v);
-
-    /* Position += Velocity * dt */
-    delta_p = vm_v3_mulf(cube.velocity, time_step);
-    cube.position = vm_v3_add(cube.position, delta_p);
-
-    /* Ground collision (basic) */
-    if (cube.position.y < GROUND_Y)
+    /* Force 2: calculate steering force */
     {
-        cube.position.y = GROUND_Y;
-        if (cube.velocity.y < 0)
+        /* world-space direction of the spring force */
+        v3 steering_dir = vm_transformation_right(wheel);
+
+        float steering_vel = vm_v3_dot(steering_dir, wheel_world_vel);
+
+        /* gripFactor is in range 0-1, 0 means no grip, 1 means full grip */
+        float desired_velocity_change = -steering_vel * wheel_grip_factor;
+        float desired_acceleration = desired_velocity_change / dt;
+
+        v3 final_force = vm_v3_mulf(steering_dir, wheel_mass * desired_acceleration);
+
+        rigid_body_apply_force_at_position(car, final_force, wheel_position);
+    }
+
+    /* Force 3: acceleration / braking */
+    {
+        /* world-space direction of the acceleration/braking force. */
+        v3 acceleration_dir = vm_transformation_forward(wheel);
+
+        float car_speed = vm_v3_dot(rigid_body_forward(car), car->velocity);
+        float normalized_speed = vm_clamp01f(vm_absf(car_speed) / car_top_speed);
+        float available_torque = simple_power_curve_evaluate(normalized_speed) * acceleration_input;
+
+        v3 final_force = vm_v3_mulf(acceleration_dir, available_torque);
+
+        rigid_body_apply_force_at_position(car, final_force, wheel_position);
+    }
+}
+
+static bool car_initialized;
+static rigid_body car;
+
+void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *platformApi)
+{
+    float dt = (float)state->dt;
+    float gravity = -9.81f;
+
+    float car_top_speed = 10.0f;
+
+    static float acceleration_input = 1.0f;
+    static float steering_angle = -0.3f;
+
+    int i;
+
+    transformation car_transform;
+    m4x4 car_model;
+    v3 car_color = vm_v3(1.0f, 1.0f, 1.0f);
+
+#define NUM_WHEELS 4
+    v3 wheels[NUM_WHEELS];
+    wheels[0] = vm_v3(-1.0f, 0.0f, -1.0f); /* Front-Left  */
+    wheels[1] = vm_v3(1.0f, 0.0f, -1.0f);  /* Front-Right */
+    wheels[2] = vm_v3(-1.0f, 0.0f, 1.0f);  /* Rear-Left   */
+    wheels[3] = vm_v3(1.0f, 0.0f, 1.0f);   /* Rear-Right  */
+
+    if (!car_initialized)
+    {
+        car = rigid_body_init(
+            vm_v3(0.0f, 5.0f, 0.0f),         /* car position */
+            vm_quat(0.0f, 0.0f, 0.0f, 1.0f), /* car orientation */
+            1200.0f,                         /* car mass */
+            2500.0f                          /* car inertia */
+        );
+
+        car_initialized = true;
+    }
+
+    /* Update the car transform so that the wheel transforms are also updated in the next step */
+    car.force.y += gravity * car.mass;
+
+    /* For each wheel */
+    for (i = 0; i < NUM_WHEELS; ++i)
+    {
+        float restDist = 0.5f;
+        float rayDist = 0.3f;
+        float spring_strength = 30000.0f;
+        float spring_damper = 2500.0f;
+        float wheel_grip_factor = 0.9f;
+
+        float wheel_mass = car.mass / NUM_WHEELS;
+
+        float rayLength = restDist + rayDist;
+        float groundHitY = 0.0f;
+        float distToGround;
+        bool rayDidHit;
+
+        /* wheel position and rotation has to be relative to the car position and orientation ! */
+        v3 wheel_local_pos = wheels[i];
+        transformation wheel = vm_tranformation_init();
+
+        m4x4 wheel_model;
+        v3 wheel_color = vm_v3(1.0f, 0.0f, 0.0f);
+
+        if (i > 1)
         {
-            cube.velocity.y = -cube.velocity.y * RESTITUTION;
+            wheel_grip_factor = 0.1f;
         }
+
+        wheel.position = vm_v3_add(car.position, vm_v3_rotate(wheel_local_pos, car.orientation));
+        wheel.rotation = car.orientation;
+
+        if (i < 2)
+        {
+            wheel.rotation = vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wheel), steering_angle), wheel.rotation);
+        }
+
+        distToGround = wheel.position.y - groundHitY;
+
+        rayDidHit = distToGround < rayLength;
+
+        if (rayDidHit)
+        {
+            wheel_update(
+                &car,
+                &wheel,
+                dt,
+                restDist,
+                distToGround,
+                spring_strength,
+                spring_damper,
+                wheel_grip_factor,
+                wheel_mass,
+                acceleration_input,
+                car_top_speed);
+        }
+
+        /* Visualizing the wheel up, forward, right vector */
+        render_vector(call, wheel.position, vm_transformation_up(&wheel), vm_v3(0.0f, 1.0f, 0.0f));
+        render_vector(call, wheel.position, vm_transformation_forward(&wheel), vm_v3(0.0f, 0.0f, 1.0f));
+        render_vector(call, wheel.position, vm_transformation_right(&wheel), vm_v3(1.0f, 0.0f, 0.0f));
+
+        wheel.scale = vm_v3f(0.2f);
+        wheel_model = vm_transformation_matrix(&wheel);
+        speg_draw_call_append(call, &wheel_model, &wheel_color, default_texture_index);
     }
 
-    /* Simulation is done cube is fully set so we reset the state and restart the simulation*/
-    if (vm_v3_equals(cube.position, vm_v3(3.0f, 0.0f, 5.0f)) && cube.velocity.y <= 0.08f)
-    {
-        rigid_init = false;
-    }
+    rigid_body_integrate(&car, dt);
 
-    cube_color = vm_v3(vm_clampf(vm_absf(cube.velocity.y) * 0.5f, 0.1f, 1.0f), 0.0f, 0.0f);
-    cube_model = vm_m4x4_translate(vm_m4x4_identity, cube.position);
-    speg_draw_call_append(call, &cube_model, &cube_color, default_texture_index);
+    /* Visualizing the car up, forward, right vector */
+    render_vector(call, car.position, vm_v3_mulf(rigid_body_up(&car), 2.0f), vm_v3(0.0f, 1.0f, 0.0f));
+    render_vector(call, car.position, vm_v3_mulf(rigid_body_forward(&car), 2.0f), vm_v3(0.0f, 0.0f, 1.0f));
+    render_vector(call, car.position, vm_v3_mulf(rigid_body_right(&car), 2.0f), vm_v3(1.0f, 0.0f, 0.0f));
+    render_vector(call, car.position, car.velocity, vm_v3(0.941f, 0.925f, 0.0f));
+    render_vector(call, car.position, car.angularVelocity, vm_v3(0.941f, 0.925f, 0.0f));
 
-    text_model = vm_m4x4_scalef(vm_m4x4_translate(vm_m4x4_identity, vm_v3(cube.position.x, cube.position.y + 1.0f, cube.position.z)), 0.5f);
-    speg_draw_call_append(call, &text_model, &text_color, ((int)'V' - 32));
+    (void)platformApi;
+    /*
+        platformApi->platform_print_console(
+            __FILE__,
+            __LINE__,
+            "pos=(%.2f, %.2f, %.2f) | orientation=(%.2f, %.2f, %.2f, %.2f) | speed=%.2f\n",
+            car.position.x, car.position.y, car.position.z,
+            car.orientation.x, car.orientation.y, car.orientation.z, car.orientation.w,
+            vm_v3_length(car.velocity));
+            */
+
+    car_transform = vm_tranformation_init();
+    car_transform.position = car.position;
+    car_transform.rotation = car.orientation;
+
+    car_model = vm_transformation_matrix(&car_transform);
+
+    speg_draw_call_append(call, &car_model, &car_color, default_texture_index);
 }
 
 /* Draw call batching groups */
@@ -777,7 +954,7 @@ static float all_static_colors[MAX_STATIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 static int all_static_texture_indices[MAX_STATIC_INSTANCES];
 static speg_draw_call draw_call_static = {0};
 
-#define MAX_DYNAMIC_INSTANCES 1024
+#define MAX_DYNAMIC_INSTANCES 2048
 static float all_dynamic_models[MAX_DYNAMIC_INSTANCES * VM_M4X4_ELEMENT_COUNT];
 static float all_dynamic_colors[MAX_DYNAMIC_INSTANCES * VM_V3_ELEMENT_COUNT];
 static int all_dynamic_texture_indices[MAX_DYNAMIC_INSTANCES];
@@ -902,9 +1079,9 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     /* Dynamic scenes */
     render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f, &cam);
     render_transformations_test(&draw_call_dynamic, state);
-    render_rigid_cube_simulation(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, input);
     render_text(&draw_call_text, state, platformApi);
+    render_car(&draw_call_dynamic, state, platformApi);
 
     state->renderedObjects =
         draw_call_static.count_instances +
