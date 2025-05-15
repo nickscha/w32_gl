@@ -818,6 +818,7 @@ void render_car(speg_draw_call *call, speg_state *state)
 {
     float dt = (float)state->dt;
     float gravity = -9.81f;
+    v3 gravity_force = vm_v3(0.0f, gravity, 0.0f);
 
     float car_top_speed = 10.0f;
 
@@ -850,7 +851,7 @@ void render_car(speg_draw_call *call, speg_state *state)
     }
 
     /* Update the car transform so that the wheel transforms are also updated in the next step */
-    car.force.y += gravity * car.mass;
+    car.force = vm_v3_add(car.force, vm_v3_mulf(gravity_force, car.mass));
 
     /* For each wheel */
     for (i = 0; i < NUM_WHEELS; ++i)
