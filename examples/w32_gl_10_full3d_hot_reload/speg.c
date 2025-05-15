@@ -814,7 +814,7 @@ void wheel_update(
 static bool car_initialized;
 static rigid_body car;
 
-void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *platformApi)
+void render_car(speg_draw_call *call, speg_state *state)
 {
     float dt = (float)state->dt;
     float gravity = -9.81f;
@@ -828,7 +828,7 @@ void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *plat
 
     transformation car_transform;
     m4x4 car_model;
-    v3 car_color = vm_v3(1.0f, 1.0f, 1.0f);
+    v3 car_color = vm_v3(0.4f, 0.4f, 0.4f);
 
 #define NUM_WHEELS 4
     v3 wheels[NUM_WHEELS];
@@ -927,20 +927,14 @@ void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *plat
     render_vector(call, car.position, car.velocity, vm_v3(0.941f, 0.925f, 0.0f));
     render_vector(call, car.position, car.angularVelocity, vm_v3(0.941f, 0.925f, 0.0f));
 
-    (void)platformApi;
-    /*
-        platformApi->platform_print_console(
-            __FILE__,
-            __LINE__,
-            "pos=(%.2f, %.2f, %.2f) | orientation=(%.2f, %.2f, %.2f, %.2f) | speed=%.2f\n",
-            car.position.x, car.position.y, car.position.z,
-            car.orientation.x, car.orientation.y, car.orientation.z, car.orientation.w,
-            vm_v3_length(car.velocity));
-            */
-
+    /* Visualize car not just as a cube. Doesn't affect the physics simulation !*/
     car_transform = vm_tranformation_init();
     car_transform.position = car.position;
+    car_transform.position.y += 0.5f;
     car_transform.rotation = car.orientation;
+    car_transform.scale.y = 0.2f;
+    car_transform.scale.x = 1.5f;
+    car_transform.scale.z = 2.0f;
 
     car_model = vm_transformation_matrix(&car_transform);
 
@@ -1081,7 +1075,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     render_transformations_test(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, input);
     render_text(&draw_call_text, state, platformApi);
-    render_car(&draw_call_dynamic, state, platformApi);
+    render_car(&draw_call_dynamic, state);
 
     state->renderedObjects =
         draw_call_static.count_instances +
