@@ -765,6 +765,9 @@ void wheel_update(
 {
     v3 wheel_position = wheel->position;
     v3 wheel_world_vel = rigid_body_point_velocity(car, wheel_position);
+    v3 force_suspension;
+    v3 force_steering;
+    v3 force_acceleration;
 
     /* Force 1: calculate suspension force*/
     {
@@ -775,9 +778,7 @@ void wheel_update(
         float velocity = vm_v3_dot(spring_dir, wheel_world_vel);
         float force = (offset * spring_strength) - (velocity * spring_damper);
 
-        v3 final_force = vm_v3_mulf(spring_dir, force);
-
-        rigid_body_apply_force_at_position(car, final_force, wheel_position);
+        force_suspension = vm_v3_mulf(spring_dir, force);
     }
 
     /* Force 2: calculate steering force */
@@ -791,9 +792,7 @@ void wheel_update(
         float desired_velocity_change = -steering_vel * wheel_grip_factor;
         float desired_acceleration = desired_velocity_change / dt;
 
-        v3 final_force = vm_v3_mulf(steering_dir, wheel_mass * desired_acceleration);
-
-        rigid_body_apply_force_at_position(car, final_force, wheel_position);
+        force_steering = vm_v3_mulf(steering_dir, wheel_mass * desired_acceleration);
     }
 
     /* Force 3: acceleration / braking */
@@ -805,10 +804,13 @@ void wheel_update(
         float normalized_speed = vm_clamp01f(vm_absf(car_speed) / car_top_speed);
         float available_torque = simple_power_curve_evaluate(normalized_speed) * acceleration_input;
 
-        v3 final_force = vm_v3_mulf(acceleration_dir, available_torque);
-
-        rigid_body_apply_force_at_position(car, final_force, wheel_position);
+        force_acceleration = vm_v3_mulf(acceleration_dir, available_torque);
     }
+
+    rigid_body_apply_force_at_position(
+        car,
+        vm_v3_add(vm_v3_add(force_suspension, force_steering), force_acceleration),
+        wheel_position);
 }
 
 static bool car_initialized;
@@ -1040,8 +1042,6 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         view_simulated = view;
     }
 
-    projection_view = vm_m4x4_mul(projection, view);
-
     /* Dynamic Cubes */
     draw_call_dynamic.mesh = &cube_dynamic;
     draw_call_dynamic.count_instances_max = MAX_DYNAMIC_INSTANCES;
@@ -1083,6 +1083,8 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         draw_call_dynamic.count_instances +
         draw_call_dynamic_gui.count_instances +
         draw_call_text.count_instances;
+
+    projection_view = vm_m4x4_mul(projection, view);
 
     /* Draw static and dynamic scenes */
     platformApi->platform_draw(&draw_call_static, projection_view.e);
