@@ -607,11 +607,14 @@ void win32_printf(const char *str)
     WriteConsoleA(hConsole, str, w32_strlen(str), &written, NULL);
 }
 
-#define win32_print_console(formatString, ...)                         \
-    char output[512];                                                  \
-    wsprintfA(output, "%s:%d ", __FILE__, __LINE__);                   \
-    wsprintfA(output + w32_strlen(output), formatString, __VA_ARGS__); \
-    win32_printf(output);
+#define win32_print_console(formatString, ...)                             \
+    do                                                                     \
+    {                                                                      \
+        char output[512];                                                  \
+        wsprintfA(output, "%s:%d ", __FILE__, __LINE__);                   \
+        wsprintfA(output + w32_strlen(output), formatString, __VA_ARGS__); \
+        win32_printf(output);                                              \
+    } while (0)
 
 #endif /* W32_GL_H */
 
