@@ -300,7 +300,7 @@ void speg_float_to_string(float value, char *buffer, int precision)
         platformApi->platform_print_console(                                     \
             __FILE__,                                                            \
             __LINE__,                                                            \
-            "[speg-profiler] cycles: %8d, ms: %12s, \"%s\"\n",                   \
+            "[speg-profiler] %8d cycles, %12s ms, \"%s\"\n",                     \
             (__endCycles - __startCycles),                                       \
             floatBuffer,                                                         \
             name);                                                               \
@@ -383,7 +383,7 @@ void render_grid(speg_draw_call *call)
 void spawn_random_cube(int i, float range, v3 *position, v3 *color)
 {
     static const float color_scale = 1.0f / 255.0f;
-    unsigned int c = (i == 0 ? 1 : i) * 10000000;
+    unsigned int c = ((unsigned int)i == 0 ? 1 : (unsigned int)i) * 10000000;
     float r = ((float)(((c >> 16) & 0xFF) >> 1)) * color_scale;
     float g = ((float)((c >> 8) & 0xFF)) * color_scale;
     float b = ((float)(c & 0xFF)) * color_scale;
@@ -593,7 +593,7 @@ void generate_random_string(char *str, int length)
         char random_char;
 
         lcg_state = lcg_state * 1103515245 + 12345;
-        random_char = (char)(((lcg_state / 65536) % 32768) % (printable_ascii_end - printable_ascii_start + 1)) + printable_ascii_start;
+        random_char = (char)((int)((lcg_state / 65536) % 32768) % (printable_ascii_end - printable_ascii_start + 1)) + printable_ascii_start;
 
         str[i] = random_char;
     }
@@ -653,7 +653,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
     for (i = 0; random_string[i] != '\0'; ++i)
     {
         static const float color_scale = 1.0f / 255.0f;
-        unsigned int n = (i == 0 ? 1 : i) * 3000000;
+        unsigned int n = (unsigned int)((i == 0 ? 1 : i) * 3000000);
         float r = ((float)(((n >> 16) & 0xFF) >> 1)) * color_scale;
         float g = ((float)((n >> 8) & 0xFF)) * color_scale;
         float b = ((float)(n & 0xFF)) * color_scale;
@@ -1016,7 +1016,7 @@ static int all_text_indices[MAX_DYNAMIC_TEXT_INSTANCES];
 static speg_draw_call draw_call_text = {0};
 
 /* MESH definition for each speg_draw_call */
-#define SPEG_INIT_MESH(name, culling, verts, indices, uvs) {name, false, culling, verts, sizeof(verts), indices, sizeof(indices), uvs, sizeof(uvs), array_size(indices)}
+#define SPEG_INIT_MESH(name, culling, verts, indices, uvs) {name, false, culling, verts, sizeof(verts), indices, sizeof(indices), uvs, sizeof(uvs), array_size(indices), 0, 0, 0, 0, 0, 0, 0}
 
 static speg_mesh cube_static = SPEG_INIT_MESH("cube_static", true, cube_vertices, cube_indices, cube_uvs);
 static speg_mesh cube_dynamic = SPEG_INIT_MESH("cube_dynamic", true, cube_vertices, cube_indices, cube_uvs);
@@ -1135,11 +1135,10 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
     render_text(&draw_call_text, state, platformApi);
     render_car(&draw_call_dynamic, state);
 
-    state->renderedObjects =
-        draw_call_static.count_instances +
-        draw_call_dynamic.count_instances +
-        draw_call_dynamic_gui.count_instances +
-        draw_call_text.count_instances;
+    state->renderedObjects = (unsigned int)(draw_call_static.count_instances +
+                                            draw_call_dynamic.count_instances +
+                                            draw_call_dynamic_gui.count_instances +
+                                            draw_call_text.count_instances);
 
     projection_view = vm_m4x4_mul(projection, view);
 

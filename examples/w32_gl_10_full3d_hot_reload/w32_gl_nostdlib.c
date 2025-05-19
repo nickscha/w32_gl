@@ -282,9 +282,9 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     /* set attribute pointers 2 - 5 for matrix (4 times vec4) */
     for (int i = 0; i < 4; ++i)
     {
-      glEnableVertexAttribArray(2 + i);
-      glVertexAttribPointer(2 + i, 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)(i * sizeof(float) * 4));
-      glVertexAttribDivisor(2 + i, 1);
+      glEnableVertexAttribArray((unsigned int)(2 + i));
+      glVertexAttribPointer((unsigned int)(2 + i), 4, GL_FLOAT, GL_FALSE, sizeM4x4, (void *)((unsigned long long)i * sizeof(float) * 4));
+      glVertexAttribDivisor((unsigned int)(2 + i), 1);
     }
 
     /* Instance color attribute (layout = 6) */
@@ -297,7 +297,7 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     /* Instance texture index (layout = 9)*/
     glGenBuffers(1, &mesh->TBO);
     glBindBuffer(GL_ARRAY_BUFFER, mesh->TBO);
-    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeof(int), draw_call->texture_indices, draw_call->changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * (int)sizeof(int), draw_call->texture_indices, draw_call->changed ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     glEnableVertexAttribArray(9);
     glVertexAttribIPointer(9, 1, GL_INT, sizeof(int), (void *)0);
     glVertexAttribDivisor(9, 1);
@@ -319,7 +319,7 @@ void platform_draw(speg_draw_call *draw_call, float uniformProjectionView[16])
     glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeVec3, &draw_call->colors[0], GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, mesh->TBO);
-    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * sizeof(int), draw_call->texture_indices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, draw_call->count_instances * (int)sizeof(int), draw_call->texture_indices, GL_DYNAMIC_DRAW);
   }
 
   if (!initialized_gl)
@@ -525,8 +525,6 @@ void process_keyboard_message(platform_controller_state *state, bool isDown)
     ++state->halfTransitionCount;
   }
 }
-
-static bool simulateCam = false;
 
 void processKeyboardMessages(platform_controller_input *oldInput, platform_controller_input *newInput)
 {
@@ -1235,7 +1233,7 @@ mainCRTStartup(void)
 
       wsprintfA(buffer, "%4d ms/f, %4d fps, %10d cycles, size: %4d / %4d, %s, %s\n", msPerFrame, fps, cyclesElapsed, width, height, glRenderer, glVersion);
       SetWindowTextA(window, buffer);
-      win32_print_console("[win32] objs: %4d, culled: %4d, occlu: %4d, dc/f: %4d, %4d ms/f, %5d fps, %10d cycles, %4lu handles, %lu kb, wiref(F1) %1d, simCam(F3) %1d, vsync(F4) %1d\n", state->renderedObjects, state->culledObjects, occludedObjectsPerFrame, drawCallsPerFrame, msPerFrame, fps, cyclesElapsed, handleCount, memoryKb, wireframeMode, simulateCam, vsync);
+      win32_print_console("[win32] %4d objs, %4d culled, %4d occlu, %4d dc/f, %4d ms/f, %5d fps, %10d cycles, %4lu handles, %lu kb\n", state->renderedObjects, state->culledObjects, occludedObjectsPerFrame, drawCallsPerFrame, msPerFrame, fps, cyclesElapsed, handleCount, memoryKb);
       msPassed = 0;
     }
   }
