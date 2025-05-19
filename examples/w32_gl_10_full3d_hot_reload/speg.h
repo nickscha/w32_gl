@@ -124,9 +124,12 @@ typedef struct platform_controller_state
 typedef struct platform_controller_input
 {
 
+    /* ################ */
+    /* # Keyboard input */
+    /* ################ */
     union
     {
-        platform_controller_state keys[54];
+        platform_controller_state keys[58];
         struct
         {
             /* Function Keys */
@@ -150,6 +153,10 @@ typedef struct platform_controller_input
             platform_controller_state key_shift;
             platform_controller_state key_control;
             platform_controller_state key_space;
+            platform_controller_state key_arrow_left;
+            platform_controller_state key_arrow_up;
+            platform_controller_state key_arrow_right;
+            platform_controller_state key_arrow_down;
 
             /* Numeric */
             platform_controller_state key_0;
@@ -197,13 +204,15 @@ typedef struct platform_controller_input
         };
     };
 
-    /* Mouse information*/
-    bool mouseAttached;
-    float mouseScrollOffset;
-    float mouseXOffset;
-    float mouseYOffset;
-    int mousePosX;
-    int mousePosY;
+    /* ############# */
+    /* # Mouse input */
+    /* ############# */
+    bool mouse_attached;
+    float mouse_offset_scroll;
+    float mouse_offset_x;
+    float mouse_offset_y;
+    int mouse_position_x;
+    int mouse_position_y;
 
 } platform_controller_input;
 

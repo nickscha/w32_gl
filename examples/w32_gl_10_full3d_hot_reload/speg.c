@@ -36,12 +36,12 @@ speg_controller_input speg_map_controller_input(platform_controller_input *platf
     result.cameraSimulate = platform_input->key_f3;
     result.cameraResetPosition = platform_input->key_f5;
 
-    result.mouseAttached = platform_input->mouseAttached;
-    result.mouseScrollOffset = platform_input->mouseScrollOffset;
-    result.mouseXOffset = platform_input->mouseXOffset;
-    result.mouseYOffset = platform_input->mouseYOffset;
-    result.mousePosX = platform_input->mousePosX;
-    result.mousePosY = platform_input->mousePosY;
+    result.mouseAttached = platform_input->mouse_attached;
+    result.mouseScrollOffset = platform_input->mouse_offset_scroll;
+    result.mouseXOffset = platform_input->mouse_offset_x;
+    result.mouseYOffset = platform_input->mouse_offset_y;
+    result.mousePosX = platform_input->mouse_position_x;
+    result.mousePosY = platform_input->mouse_position_y;
 
     return (result);
 }
