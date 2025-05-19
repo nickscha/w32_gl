@@ -2,6 +2,50 @@
 #include "vm.h"
 #include "rigid_body.h"
 
+typedef struct speg_controller_input
+{
+    platform_controller_state moveForward;
+    platform_controller_state moveBackward;
+    platform_controller_state moveLeft;
+    platform_controller_state moveRight;
+    platform_controller_state moveUp;
+    platform_controller_state moveDown;
+    /* Debug / Dev commands */
+    platform_controller_state cameraSimulate;
+    platform_controller_state cameraResetPosition;
+
+    bool mouseAttached;
+    float mouseScrollOffset;
+    float mouseXOffset;
+    float mouseYOffset;
+    int mousePosX;
+    int mousePosY;
+
+} speg_controller_input;
+
+speg_controller_input speg_map_controller_input(platform_controller_input *platform_input)
+{
+    speg_controller_input result;
+
+    result.moveForward = platform_input->key_w;
+    result.moveBackward = platform_input->key_s;
+    result.moveLeft = platform_input->key_a;
+    result.moveRight = platform_input->key_d;
+    result.moveUp = platform_input->key_space;
+    result.moveDown = platform_input->key_control;
+    result.cameraSimulate = platform_input->key_f3;
+    result.cameraResetPosition = platform_input->key_f5;
+
+    result.mouseAttached = platform_input->mouseAttached;
+    result.mouseScrollOffset = platform_input->mouseScrollOffset;
+    result.mouseXOffset = platform_input->mouseXOffset;
+    result.mouseYOffset = platform_input->mouseYOffset;
+    result.mousePosX = platform_input->mousePosX;
+    result.mousePosY = platform_input->mousePosY;
+
+    return (result);
+}
+
 static float cube_vertices[] = {
     -0.5f, -0.5f, -0.5f, /* Bottom-left back */
     0.5f, -0.5f, -0.5f,  /* Bottom-right back */
@@ -979,10 +1023,13 @@ static speg_mesh cube_dynamic = SPEG_INIT_MESH("cube_dynamic", true, cube_vertic
 static speg_mesh rectangle_static = SPEG_INIT_MESH("rectangle_static", false, rectangle_vertices, rectangle_indices, rectangle_uvs);
 static speg_mesh rectangle_text = SPEG_INIT_MESH("rectangle_text", false, rectangle_vertices, rectangle_indices, rectangle_uvs);
 
-void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
+void speg_update(speg_memory *memory, platform_controller_input *platform_input, speg_platform_api *platformApi)
 {
     static camera cam;
+
     speg_state *state = (speg_state *)memory->permanentMemory;
+    speg_controller_input input;
+
     m4x4 projection;
     m4x4 ortho_proj;
     m4x4 view;
@@ -992,7 +1039,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     assert(memory);
     assert(memory->permanentMemorySize > 0);
     assert(memory->permanentMemory);
-    assert(input);
+    assert(platform_input);
     assert(platformApi);
 
     /* Initialized only once at startup */
@@ -1054,18 +1101,20 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialized\n");
     }
 
+    input = speg_map_controller_input(platform_input);
+
     /* Reset dynamic draw call buffers */
     draw_call_dynamic.count_instances = 0;
     draw_call_dynamic_gui.count_instances = 0;
     draw_call_text.count_instances = 0;
 
-    camera_update_movement(input, &cam, 10.0f * (float)state->dt);
+    camera_update_movement(&input, &cam, 10.0f * (float)state->dt);
 
     projection = vm_m4x4_perspective(vm_radf(cam.fov), (float)state->width / (float)state->height, 0.1f, 1000.0f);
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
     ortho_proj = vm_m4x4_orthographic(0.0f, (float)state->width, 0.0f, (float)state->height, -1.0f, 1.0f);
 
-    if (input->cameraSimulate.endedDown)
+    if (input.cameraSimulate.endedDown)
     {
         /* We set the camera position a bit back in order to see the discarded frustum culling objects (red) in the actual view */
         v3 simulatedCamPos = cam.position;
@@ -1080,9 +1129,9 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     }
 
     /* Dynamic scenes */
-    render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f, &cam);
+    render_cubes(&draw_call_dynamic, projection, view_simulated, state, &input, 20.0f, &cam);
     render_transformations_test(&draw_call_dynamic, state);
-    render_gui_rectangle(&draw_call_dynamic_gui, state, input);
+    render_gui_rectangle(&draw_call_dynamic_gui, state, &input);
     render_text(&draw_call_text, state, platformApi);
     render_car(&draw_call_dynamic, state);
 

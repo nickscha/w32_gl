@@ -517,7 +517,7 @@ static LRESULT W32_CALLBACK w32_window_callback(HWND window, UINT message, WPARA
   return (result);
 }
 
-void processKeyboardMessage(speg_controller_state *state, bool isDown)
+void process_keyboard_message(platform_controller_state *state, bool isDown)
 {
   if (state->endedDown != isDown)
   {
@@ -528,7 +528,7 @@ void processKeyboardMessage(speg_controller_state *state, bool isDown)
 
 static bool simulateCam = false;
 
-void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_input *newInput)
+void processKeyboardMessages(platform_controller_input *oldInput, platform_controller_input *newInput)
 {
   /* Reset mouse offsets*/
   newInput->mouseScrollOffset = 0.0f;
@@ -602,33 +602,69 @@ void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_in
 
       if (wasDown != isDown)
       {
-        if (vkCode == 'W')
+        switch (vkCode)
         {
-          processKeyboardMessage(&newInput->moveForward, isDown);
-        }
-        else if (vkCode == 'A')
-        {
-          processKeyboardMessage(&newInput->moveLeft, isDown);
-        }
-        else if (vkCode == 'S')
-        {
-          processKeyboardMessage(&newInput->moveBackward, isDown);
-        }
-        else if (vkCode == 'D')
-        {
-          processKeyboardMessage(&newInput->moveRight, isDown);
-        }
-        else if (vkCode == 'E' || vkCode == VK_SPACE)
-        {
-          processKeyboardMessage(&newInput->moveUp, isDown);
-        }
-        else if (vkCode == 'Q' || vkCode == VK_CONTROL)
-        {
-          processKeyboardMessage(&newInput->moveDown, isDown);
-        }
-        else if (vkCode == VK_F5)
-        {
-          processKeyboardMessage(&newInput->cameraResetPosition, isDown);
+          /* Function Keys */
+          case 0x70: process_keyboard_message(&newInput->key_f1, isDown); break;
+          case 0x71: process_keyboard_message(&newInput->key_f2, isDown); break;
+          case 0x72: process_keyboard_message(&newInput->key_f3, isDown); break;
+          case 0x73: process_keyboard_message(&newInput->key_f4, isDown); break;
+          case 0x74: process_keyboard_message(&newInput->key_f5, isDown); break;
+          case 0x75: process_keyboard_message(&newInput->key_f6, isDown); break;
+          case 0x76: process_keyboard_message(&newInput->key_f7, isDown); break;
+          case 0x77: process_keyboard_message(&newInput->key_f8, isDown); break;
+          case 0x78: process_keyboard_message(&newInput->key_f9, isDown); break;
+          case 0x79: process_keyboard_message(&newInput->key_f10, isDown); break;
+          case 0x7A: process_keyboard_message(&newInput->key_f11, isDown); break;
+          case 0x7B: process_keyboard_message(&newInput->key_f12, isDown); break;
+
+          /* Special Keys */
+          case 0x08: process_keyboard_message(&newInput->key_backspace, isDown); break;
+          case 0x09: process_keyboard_message(&newInput->key_tab, isDown); break;
+          case 0x0D: process_keyboard_message(&newInput->key_return, isDown); break;
+          case 0x10: process_keyboard_message(&newInput->key_shift, isDown); break;
+          case 0x11: process_keyboard_message(&newInput->key_control, isDown); break;
+          case 0x20: process_keyboard_message(&newInput->key_space, isDown); break;
+
+          /* Numeric */
+          case '0': process_keyboard_message(&newInput->key_0, isDown); break;
+          case '1': process_keyboard_message(&newInput->key_1, isDown); break;
+          case '2': process_keyboard_message(&newInput->key_2, isDown); break;
+          case '3': process_keyboard_message(&newInput->key_3, isDown); break;
+          case '4': process_keyboard_message(&newInput->key_4, isDown); break;
+          case '5': process_keyboard_message(&newInput->key_5, isDown); break;
+          case '6': process_keyboard_message(&newInput->key_6, isDown); break;
+          case '7': process_keyboard_message(&newInput->key_7, isDown); break;
+          case '8': process_keyboard_message(&newInput->key_8, isDown); break;
+          case '9': process_keyboard_message(&newInput->key_9, isDown); break;
+          /* Alphanumeric */
+          case 'Q': process_keyboard_message(&newInput->key_q, isDown); break;
+          case 'W': process_keyboard_message(&newInput->key_w, isDown); break;
+          case 'E': process_keyboard_message(&newInput->key_e, isDown); break;
+          case 'R': process_keyboard_message(&newInput->key_r, isDown); break;
+          case 'T': process_keyboard_message(&newInput->key_t, isDown); break;
+          case 'Z': process_keyboard_message(&newInput->key_z, isDown); break;
+          case 'U': process_keyboard_message(&newInput->key_u, isDown); break;
+          case 'I': process_keyboard_message(&newInput->key_i, isDown); break;
+          case 'O': process_keyboard_message(&newInput->key_o, isDown); break;
+          case 'P': process_keyboard_message(&newInput->key_p, isDown); break;
+          case 'A': process_keyboard_message(&newInput->key_a, isDown); break;
+          case 'S': process_keyboard_message(&newInput->key_s, isDown); break;
+          case 'D': process_keyboard_message(&newInput->key_d, isDown); break;
+          case 'F': process_keyboard_message(&newInput->key_f, isDown); break;
+          case 'G': process_keyboard_message(&newInput->key_g, isDown); break;
+          case 'H': process_keyboard_message(&newInput->key_h, isDown); break;
+          case 'J': process_keyboard_message(&newInput->key_j, isDown); break;
+          case 'K': process_keyboard_message(&newInput->key_k, isDown); break;
+          case 'L': process_keyboard_message(&newInput->key_l, isDown); break;
+          case 'Y': process_keyboard_message(&newInput->key_y, isDown); break;
+          case 'X': process_keyboard_message(&newInput->key_x, isDown); break;
+          case 'C': process_keyboard_message(&newInput->key_c, isDown); break;
+          case 'V': process_keyboard_message(&newInput->key_v, isDown); break;
+          case 'B': process_keyboard_message(&newInput->key_b, isDown); break;
+          case 'N': process_keyboard_message(&newInput->key_n, isDown); break;
+          case 'M': process_keyboard_message(&newInput->key_m, isDown); break;
+          default: break;
         }
       }
 
@@ -657,12 +693,6 @@ void processKeyboardMessages(speg_controller_input *oldInput, speg_controller_in
           mousePoint.y = height / 2;
           ClientToScreen(window, &mousePoint);
           SetCursorPos(mousePoint.x, mousePoint.y);
-        }
-
-        else if (vkCode == VK_F3)
-        {
-          simulateCam = !simulateCam;
-          processKeyboardMessage(&newInput->cameraSimulate, simulateCam);
         }
 
         else if (vkCode == VK_F4)
@@ -974,9 +1004,9 @@ mainCRTStartup(void)
   assert(memory.permanentMemorySize > 0);
   assert(memory.permanentMemory);
 
-  speg_controller_input inputs[2] = {0};
-  speg_controller_input *newInput = &inputs[0];
-  speg_controller_input *oldInput = &inputs[1];
+  platform_controller_input inputs[2] = {0};
+  platform_controller_input *newInput = &inputs[0];
+  platform_controller_input *oldInput = &inputs[1];
 
   HANDLE currentProc = GetCurrentProcess();
 
@@ -1041,7 +1071,7 @@ mainCRTStartup(void)
       Sleep(1);
     }
 
-    speg_controller_input *tmp = newInput;
+    platform_controller_input *tmp = newInput;
     newInput = oldInput;
     oldInput = tmp;
 

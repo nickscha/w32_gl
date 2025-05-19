@@ -113,36 +113,87 @@ typedef struct speg_platform_api
 /********************************/
 /* Application provided methods */
 /********************************/
-typedef struct speg_controller_state
+typedef struct platform_controller_state
 {
     int halfTransitionCount;
     bool endedDown;
-} speg_controller_state;
+} platform_controller_state;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-typedef struct speg_controller_input
+typedef struct platform_controller_input
 {
 
     union
     {
-        speg_controller_state keys[8];
+        platform_controller_state keys[54];
         struct
         {
-            speg_controller_state moveForward;
-            speg_controller_state moveBackward;
-            speg_controller_state moveLeft;
-            speg_controller_state moveRight;
+            /* Function Keys */
+            platform_controller_state key_f1;
+            platform_controller_state key_f2;
+            platform_controller_state key_f3;
+            platform_controller_state key_f4;
+            platform_controller_state key_f5;
+            platform_controller_state key_f6;
+            platform_controller_state key_f7;
+            platform_controller_state key_f8;
+            platform_controller_state key_f9;
+            platform_controller_state key_f10;
+            platform_controller_state key_f11;
+            platform_controller_state key_f12;
 
-            speg_controller_state moveUp;
-            speg_controller_state moveDown;
+            /* Special Keys */
+            platform_controller_state key_backspace;
+            platform_controller_state key_tab;
+            platform_controller_state key_return;
+            platform_controller_state key_shift;
+            platform_controller_state key_control;
+            platform_controller_state key_space;
 
-            /* Debug / Dev commands */
-            speg_controller_state cameraSimulate;
-            speg_controller_state cameraResetPosition;
+            /* Numeric */
+            platform_controller_state key_0;
+            platform_controller_state key_1;
+            platform_controller_state key_2;
+            platform_controller_state key_3;
+            platform_controller_state key_4;
+            platform_controller_state key_5;
+            platform_controller_state key_6;
+            platform_controller_state key_7;
+            platform_controller_state key_8;
+            platform_controller_state key_9;
+
+            /* Alphanumeric */
+            platform_controller_state key_q;
+            platform_controller_state key_w;
+
+            platform_controller_state key_e;
+            platform_controller_state key_r;
+            platform_controller_state key_t;
+            platform_controller_state key_z;
+            platform_controller_state key_u;
+            platform_controller_state key_i;
+            platform_controller_state key_o;
+            platform_controller_state key_p;
+            platform_controller_state key_a;
+            platform_controller_state key_s;
+            platform_controller_state key_d;
+            platform_controller_state key_f;
+            platform_controller_state key_g;
+            platform_controller_state key_h;
+            platform_controller_state key_j;
+            platform_controller_state key_k;
+            platform_controller_state key_l;
+            platform_controller_state key_y;
+            platform_controller_state key_x;
+            platform_controller_state key_c;
+            platform_controller_state key_v;
+            platform_controller_state key_b;
+            platform_controller_state key_n;
+            platform_controller_state key_m;
 
             /* All buttons must be added above this line */
-            speg_controller_state terminator;
+            platform_controller_state terminator;
         };
     };
 
@@ -154,7 +205,8 @@ typedef struct speg_controller_input
     int mousePosX;
     int mousePosY;
 
-} speg_controller_input;
+} platform_controller_input;
+
 #pragma GCC diagnostic pop
 
 typedef struct speg_state
@@ -178,16 +230,16 @@ typedef struct speg_memory
 } speg_memory;
 
 #ifdef SPEG_IMPORT
-void speg_update_stub(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi)
+void speg_update_stub(speg_memory *memory, platform_controller_input *input, speg_platform_api *platformApi)
 {
     (void)memory;
     (void)input;
     (void)platformApi;
 }
-typedef void (*func_speg_update)(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi);
+typedef void (*func_speg_update)(speg_memory *memory, platform_controller_input *input, speg_platform_api *platformApi);
 static func_speg_update speg_update = speg_update_stub;
 #else
-void speg_update(speg_memory *memory, speg_controller_input *input, speg_platform_api *platformApi);
+void speg_update(speg_memory *memory, platform_controller_input *input, speg_platform_api *platformApi);
 #endif
 
 #endif /* SPEG_H */
