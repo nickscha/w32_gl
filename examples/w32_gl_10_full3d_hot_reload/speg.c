@@ -1008,6 +1008,7 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         state->clearColorG = 0.2f;
         state->clearColorB = 0.2f;
 
+        /* Static Cubes */
         draw_call_static.mesh = &cube_static;
         draw_call_static.count_instances_max = MAX_STATIC_INSTANCES;
         draw_call_static.count_instances = 0;
@@ -1016,6 +1017,35 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
         draw_call_static.texture_indices = all_static_texture_indices;
         draw_call_static.changed = false;
 
+        /* Dynamic Cubes */
+        draw_call_dynamic.mesh = &cube_dynamic;
+        draw_call_dynamic.count_instances_max = MAX_DYNAMIC_INSTANCES;
+        draw_call_dynamic.count_instances = 0;
+        draw_call_dynamic.models = all_dynamic_models;
+        draw_call_dynamic.colors = all_dynamic_colors;
+        draw_call_dynamic.texture_indices = all_dynamic_texture_indices;
+        draw_call_dynamic.changed = true;
+
+        /* 2D GUI Elements */
+        draw_call_dynamic_gui.mesh = &rectangle_static;
+        draw_call_dynamic_gui.count_instances_max = MAX_DYNAMIC_GUI_INSTANCES;
+        draw_call_dynamic_gui.count_instances = 0;
+        draw_call_dynamic_gui.models = all_dynamic_gui_models;
+        draw_call_dynamic_gui.colors = all_dynamic_gui_colors;
+        draw_call_dynamic_gui.texture_indices = all_dynamic_gui_texture_indices;
+        draw_call_dynamic_gui.changed = true;
+        draw_call_dynamic_gui.is_2d = true;
+
+        /* 3D Text */
+        draw_call_text.mesh = &rectangle_text;
+        draw_call_text.count_instances_max = MAX_DYNAMIC_TEXT_INSTANCES;
+        draw_call_text.count_instances = 0;
+        draw_call_text.models = all_text_models;
+        draw_call_text.colors = all_text_colors;
+        draw_call_text.texture_indices = all_text_indices;
+        draw_call_text.changed = true;
+        draw_call_text.is_2d = true;
+
         /* Static scenes */
         PROFILE(render_coordinate_axis(&draw_call_static));
         PROFILE(render_grid(&draw_call_static));
@@ -1023,6 +1053,11 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
 
         platformApi->platform_print_console(__FILE__, __LINE__, "[speg] initialized\n");
     }
+
+    /* Reset dynamic draw call buffers */
+    draw_call_dynamic.count_instances = 0;
+    draw_call_dynamic_gui.count_instances = 0;
+    draw_call_text.count_instances = 0;
 
     camera_update_movement(input, &cam, 10.0f * (float)state->dt);
 
@@ -1043,35 +1078,6 @@ void speg_update(speg_memory *memory, speg_controller_input *input, speg_platfor
     {
         view_simulated = view;
     }
-
-    /* Dynamic Cubes */
-    draw_call_dynamic.mesh = &cube_dynamic;
-    draw_call_dynamic.count_instances_max = MAX_DYNAMIC_INSTANCES;
-    draw_call_dynamic.count_instances = 0;
-    draw_call_dynamic.models = all_dynamic_models;
-    draw_call_dynamic.colors = all_dynamic_colors;
-    draw_call_dynamic.texture_indices = all_dynamic_texture_indices;
-    draw_call_dynamic.changed = true;
-
-    /* 2D GUI Elements */
-    draw_call_dynamic_gui.mesh = &rectangle_static;
-    draw_call_dynamic_gui.count_instances_max = MAX_DYNAMIC_GUI_INSTANCES;
-    draw_call_dynamic_gui.count_instances = 0;
-    draw_call_dynamic_gui.models = all_dynamic_gui_models;
-    draw_call_dynamic_gui.colors = all_dynamic_gui_colors;
-    draw_call_dynamic_gui.texture_indices = all_dynamic_gui_texture_indices;
-    draw_call_dynamic_gui.changed = true;
-    draw_call_dynamic_gui.is_2d = true;
-
-    /* 3D Text */
-    draw_call_text.mesh = &rectangle_text;
-    draw_call_text.count_instances_max = MAX_DYNAMIC_TEXT_INSTANCES;
-    draw_call_text.count_instances = 0;
-    draw_call_text.models = all_text_models;
-    draw_call_text.colors = all_text_colors;
-    draw_call_text.texture_indices = all_text_indices;
-    draw_call_text.changed = true;
-    draw_call_text.is_2d = true;
 
     /* Dynamic scenes */
     render_cubes(&draw_call_dynamic, projection, view_simulated, state, input, 20.0f, &cam);
