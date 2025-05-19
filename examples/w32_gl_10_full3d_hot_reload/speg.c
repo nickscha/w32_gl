@@ -765,9 +765,10 @@ void wheel_update(
 {
     v3 wheel_position = wheel->position;
     v3 wheel_world_vel = rigid_body_point_velocity(car, wheel_position);
-    v3 force_suspension;
-    v3 force_steering;
-    v3 force_acceleration;
+
+    v3 force_suspension = vm_v3_zero;
+    v3 force_steering = vm_v3_zero;
+    v3 force_acceleration = vm_v3_zero;
 
     /* Force 1: calculate suspension force*/
     {
@@ -807,6 +808,7 @@ void wheel_update(
         force_acceleration = vm_v3_mulf(acceleration_dir, available_torque);
     }
 
+    /* Finally add all three forces together and apply them to the rigid body at the specified position */
     rigid_body_apply_force_at_position(
         car,
         vm_v3_add(vm_v3_add(force_suspension, force_steering), force_acceleration),
