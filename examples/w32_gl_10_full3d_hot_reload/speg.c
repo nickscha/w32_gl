@@ -794,20 +794,41 @@ void render_vector(speg_draw_call *call, v3 base_position, v3 vector, v3 color)
     speg_draw_call_append(call, &model, &color, default_texture_index);
 }
 
+typedef struct wheel
+{
+    v3 local_position;
+
+    /* Tranform for setting wheel position rotation according to parent (car) position */
+    transformation transform;
+
+    /* Force 1: Suspension */
+    float suspension_rest_dist;
+    float suspension_ray_dist;
+    float suspension_spring_strength;
+    float suspension_spring_dampening;
+
+    /* Force 2: Steering */
+    bool steering_enabled;
+    float steering_wheel_mass;
+    float steering_wheel_grip;
+
+    /* Force 3: Acceleration */
+    bool acceleration_enabled;
+    float acceleration_input;
+
+    /* Caluclated*/
+    float distance_to_ground;
+
+} wheel;
+
 void wheel_update(
     rigid_body *car,
-    transformation *wheel,
+    wheel *wh,
     float dt,
-    float restDist,
-    float rayDist,
-    float spring_strength,
-    float spring_damper,
-    float wheel_grip_factor,
-    float wheel_mass,
     float acceleration_input,
     float car_top_speed)
 {
-    v3 wheel_position = wheel->position;
+    v3 wheel_position = wh->transform.position;
     v3 wheel_world_vel = rigid_body_point_velocity(car, wheel_position);
 
     v3 force_suspension = vm_v3_zero;
@@ -817,11 +838,11 @@ void wheel_update(
     /* Force 1: calculate suspension force*/
     {
         /* world-space direction of the spring force */
-        v3 spring_dir = vm_transformation_up(wheel);
+        v3 spring_dir = vm_transformation_up(&wh->transform);
 
-        float offset = restDist - rayDist;
+        float offset = wh->suspension_rest_dist - wh->distance_to_ground;
         float velocity = vm_v3_dot(spring_dir, wheel_world_vel);
-        float force = (offset * spring_strength) - (velocity * spring_damper);
+        float force = (offset * wh->suspension_spring_strength) - (velocity * wh->suspension_spring_dampening);
 
         force_suspension = vm_v3_mulf(spring_dir, force);
     }
@@ -829,21 +850,21 @@ void wheel_update(
     /* Force 2: calculate steering force */
     {
         /* world-space direction of the spring force */
-        v3 steering_dir = vm_transformation_right(wheel);
+        v3 steering_dir = vm_transformation_right(&wh->transform);
 
         float steering_vel = vm_v3_dot(steering_dir, wheel_world_vel);
 
         /* gripFactor is in range 0-1, 0 means no grip, 1 means full grip */
-        float desired_velocity_change = -steering_vel * wheel_grip_factor;
+        float desired_velocity_change = -steering_vel * wh->steering_wheel_grip;
         float desired_acceleration = desired_velocity_change / dt;
 
-        force_steering = vm_v3_mulf(steering_dir, wheel_mass * desired_acceleration);
+        force_steering = vm_v3_mulf(steering_dir, wh->steering_wheel_mass * desired_acceleration);
     }
 
     /* Force 3: acceleration / braking */
     {
         /* world-space direction of the acceleration/braking force. */
-        v3 acceleration_dir = vm_transformation_forward(wheel);
+        v3 acceleration_dir = vm_transformation_forward(&wh->transform);
 
         float car_speed = vm_v3_dot(rigid_body_forward(car), car->velocity);
         float normalized_speed = vm_clamp01f(vm_absf(car_speed) / car_top_speed);
@@ -861,6 +882,25 @@ void wheel_update(
 
 static bool car_initialized;
 static rigid_body car;
+
+wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steering_enabled, bool acceleration_enabled)
+{
+    wheel result;
+
+    result.local_position = local_position;
+    result.transform = vm_tranformation_init();
+    result.suspension_rest_dist = 0.5f;
+    result.suspension_ray_dist = 0.3f;
+    result.suspension_spring_strength = 30000.0f;
+    result.suspension_spring_dampening = 2500.0f;
+    result.steering_enabled = steering_enabled;
+    result.steering_wheel_mass = wheel_mass;
+    result.steering_wheel_grip = 0.9f;
+    result.acceleration_enabled = acceleration_enabled;
+    result.acceleration_input = 0.0f;
+
+    return (result);
+}
 
 void render_car(speg_draw_call *call, speg_state *state)
 {
@@ -880,11 +920,16 @@ void render_car(speg_draw_call *call, speg_state *state)
     v3 car_color = vm_v3(0.4f, 0.4f, 0.4f);
 
 #define NUM_WHEELS 4
-    v3 wheels[NUM_WHEELS];
-    wheels[0] = vm_v3(-1.0f, 0.0f, -1.0f); /* Front-Left  */
-    wheels[1] = vm_v3(1.0f, 0.0f, -1.0f);  /* Front-Right */
-    wheels[2] = vm_v3(-1.0f, 0.0f, 1.0f);  /* Rear-Left   */
-    wheels[3] = vm_v3(1.0f, 0.0f, 1.0f);   /* Rear-Right  */
+    wheel wh_front_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, false);
+    wheel wh_front_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, false);
+    wheel wh_rear_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true);
+    wheel wh_rear_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true);
+
+    wheel wheels[NUM_WHEELS];
+    wheels[0] = wh_front_left;
+    wheels[1] = wh_front_right;
+    wheels[2] = wh_rear_left;
+    wheels[3] = wh_rear_right;
 
     if (!car_initialized)
     {
@@ -904,66 +949,43 @@ void render_car(speg_draw_call *call, speg_state *state)
     /* For each wheel */
     for (i = 0; i < NUM_WHEELS; ++i)
     {
-        float restDist = 0.5f;
-        float rayDist = 0.3f;
-        float spring_strength = 30000.0f;
-        float spring_damper = 2500.0f;
-        float wheel_grip_factor = 0.9f;
-
-        float wheel_mass = car.mass / NUM_WHEELS;
-
-        float rayLength = restDist + rayDist;
         float groundHitY = 0.0f;
-        float distToGround;
-        bool rayDidHit;
 
-        /* wheel position and rotation has to be relative to the car position and orientation ! */
-        v3 wheel_local_pos = wheels[i];
-        transformation wheel = vm_tranformation_init();
+        wheel wh = wheels[i];
+
+        float rayLength = wh.suspension_rest_dist + wh.suspension_ray_dist;
 
         m4x4 wheel_model;
         v3 wheel_color = vm_v3(1.0f, 0.0f, 0.0f);
 
-        if (i > 1)
-        {
-            wheel_grip_factor = 0.1f;
-        }
-
-        wheel.position = vm_v3_add(car.position, vm_v3_rotate(wheel_local_pos, car.orientation));
-        wheel.rotation = car.orientation;
+        /* TODO: check if rotate has to be applied after add !*/
+        wh.transform.position = vm_v3_add(car.position, vm_v3_rotate(wh.local_position, car.orientation));
+        wh.transform.rotation = car.orientation;
 
         if (i < 2)
         {
-            wheel.rotation = vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wheel), steering_angle), wheel.rotation);
+            wh.transform.rotation = vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wh.transform), steering_angle), wh.transform.rotation);
         }
 
-        distToGround = wheel.position.y - groundHitY;
+        wh.distance_to_ground = wh.transform.position.y - groundHitY;
 
-        rayDidHit = distToGround < rayLength;
-
-        if (rayDidHit)
+        if (wh.distance_to_ground < rayLength)
         {
             wheel_update(
                 &car,
-                &wheel,
+                &wh,
                 dt,
-                restDist,
-                distToGround,
-                spring_strength,
-                spring_damper,
-                wheel_grip_factor,
-                wheel_mass,
                 acceleration_input,
                 car_top_speed);
         }
 
         /* Visualizing the wheel up, forward, right vector */
-        render_vector(call, wheel.position, vm_transformation_up(&wheel), vm_v3(0.0f, 1.0f, 0.0f));
-        render_vector(call, wheel.position, vm_transformation_forward(&wheel), vm_v3(0.0f, 0.0f, 1.0f));
-        render_vector(call, wheel.position, vm_transformation_right(&wheel), vm_v3(1.0f, 0.0f, 0.0f));
+        render_vector(call, wh.transform.position, vm_transformation_up(&wh.transform), vm_v3(0.0f, 1.0f, 0.0f));
+        render_vector(call, wh.transform.position, vm_transformation_forward(&wh.transform), vm_v3(0.0f, 0.0f, 1.0f));
+        render_vector(call, wh.transform.position, vm_transformation_right(&wh.transform), vm_v3(1.0f, 0.0f, 0.0f));
 
-        wheel.scale = vm_v3f(0.2f);
-        wheel_model = vm_transformation_matrix(&wheel);
+        wh.transform.scale = vm_v3f(0.2f);
+        wheel_model = vm_transformation_matrix(&wh.transform);
         speg_draw_call_append(call, &wheel_model, &wheel_color, default_texture_index);
     }
 
