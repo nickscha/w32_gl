@@ -809,6 +809,7 @@ typedef struct wheel
 
     /* Force 2: Steering */
     bool steering_enabled;
+    bool steering_inverted;
     float steering_wheel_mass;
     float steering_wheel_grip;
 
@@ -821,7 +822,7 @@ typedef struct wheel
 
 } wheel;
 
-wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steering_enabled, bool acceleration_enabled)
+wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steering_enabled, bool steering_inverted, bool acceleration_enabled)
 {
     wheel result;
 
@@ -832,6 +833,7 @@ wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steerin
     result.suspension_spring_strength = 30000.0f;
     result.suspension_spring_dampening = 2500.0f;
     result.steering_enabled = steering_enabled;
+    result.steering_inverted = steering_inverted;
     result.steering_wheel_mass = wheel_mass;
     result.steering_wheel_grip = 0.9f;
     result.acceleration_enabled = acceleration_enabled;
@@ -853,7 +855,7 @@ void wheel_update(
     v3 force_steering = vm_v3_zero;
     v3 force_acceleration = vm_v3_zero;
 
-    /* # Force 1: calculate suspension force*/
+    /* Force 1: calculate suspension force*/
     {
         /* world-space direction of the spring force */
         v3 spring_dir = vm_transformation_up(&wh->transform);
@@ -865,7 +867,7 @@ void wheel_update(
         force_suspension = vm_v3_mulf(spring_dir, force);
     }
 
-    /* # Force 2: calculate steering force */
+    /* Force 2: calculate steering force */
     {
         /* world-space direction of the spring force */
         v3 steering_dir = vm_transformation_right(&wh->transform);
@@ -908,7 +910,6 @@ void render_car(speg_draw_call *call, speg_state *state)
     v3 gravity_force = vm_v3(0.0f, gravity, 0.0f);
 
     float car_top_speed = 20.0f;
-
     static float steering_angle = -0.3f;
 
     int i;
@@ -918,17 +919,7 @@ void render_car(speg_draw_call *call, speg_state *state)
     v3 car_color = vm_v3(0.4f, 0.4f, 0.4f);
 
 #define NUM_WHEELS 4
-    /* AWD drive train */
-    wheel wh_front_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, true);
-    wheel wh_front_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, true);
-    wheel wh_rear_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true);
-    wheel wh_rear_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true);
-
-    wheel wheels[NUM_WHEELS];
-    wheels[0] = wh_front_left;
-    wheels[1] = wh_front_right;
-    wheels[2] = wh_rear_left;
-    wheels[3] = wh_rear_right;
+    static wheel wheels[NUM_WHEELS];
 
     if (!car_initialized)
     {
@@ -938,6 +929,12 @@ void render_car(speg_draw_call *call, speg_state *state)
             1200.0f,                         /* car mass */
             2500.0f                          /* car inertia */
         );
+
+        /* AWD drive train */
+        wheels[0] = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, false, true); /* Front-Left */
+        wheels[1] = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, false, true);  /* Front-Right */
+        wheels[2] = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true, true);  /* Rear-Left */
+        wheels[3] = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true, true);   /* Rear-Right */
 
         car_initialized = true;
     }
@@ -957,7 +954,7 @@ void render_car(speg_draw_call *call, speg_state *state)
         wheel wh = wheels[i];
         wh.transform.position = vm_v3_add(car.position, vm_v3_rotate(wh.local_position, car.orientation));
         wh.transform.rotation = car.orientation;
-        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wh.transform), steering_angle), wh.transform.rotation) : car.orientation;
+        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wh.transform), wh.steering_inverted ? -steering_angle : steering_angle), wh.transform.rotation) : car.orientation;
         wh.acceleration_input = wh.acceleration_enabled ? 1.0f : 0.0f;
         wh.distance_to_ground = wh.transform.position.y - current_ground_height;
 
