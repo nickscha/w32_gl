@@ -821,11 +821,29 @@ typedef struct wheel
 
 } wheel;
 
+wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steering_enabled, bool acceleration_enabled)
+{
+    wheel result;
+
+    result.local_position = local_position;
+    result.transform = vm_tranformation_init();
+    result.suspension_rest_dist = 0.5f;
+    result.suspension_ray_dist = 0.3f;
+    result.suspension_spring_strength = 30000.0f;
+    result.suspension_spring_dampening = 2500.0f;
+    result.steering_enabled = steering_enabled;
+    result.steering_wheel_mass = wheel_mass;
+    result.steering_wheel_grip = 0.9f;
+    result.acceleration_enabled = acceleration_enabled;
+    result.acceleration_input = 0.0f;
+
+    return (result);
+}
+
 void wheel_update(
     rigid_body *car,
     wheel *wh,
     float dt,
-    float acceleration_input,
     float car_top_speed)
 {
     v3 wheel_position = wh->transform.position;
@@ -835,7 +853,7 @@ void wheel_update(
     v3 force_steering = vm_v3_zero;
     v3 force_acceleration = vm_v3_zero;
 
-    /* Force 1: calculate suspension force*/
+    /* # Force 1: calculate suspension force*/
     {
         /* world-space direction of the spring force */
         v3 spring_dir = vm_transformation_up(&wh->transform);
@@ -847,7 +865,7 @@ void wheel_update(
         force_suspension = vm_v3_mulf(spring_dir, force);
     }
 
-    /* Force 2: calculate steering force */
+    /* # Force 2: calculate steering force */
     {
         /* world-space direction of the spring force */
         v3 steering_dir = vm_transformation_right(&wh->transform);
@@ -868,7 +886,7 @@ void wheel_update(
 
         float car_speed = vm_v3_dot(rigid_body_forward(car), car->velocity);
         float normalized_speed = vm_clamp01f(vm_absf(car_speed) / car_top_speed);
-        float available_torque = simple_power_curve_evaluate(normalized_speed) * acceleration_input;
+        float available_torque = simple_power_curve_evaluate(normalized_speed) * wh->acceleration_input;
 
         force_acceleration = vm_v3_mulf(acceleration_dir, available_torque);
     }
@@ -883,34 +901,14 @@ void wheel_update(
 static bool car_initialized;
 static rigid_body car;
 
-wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steering_enabled, bool acceleration_enabled)
-{
-    wheel result;
-
-    result.local_position = local_position;
-    result.transform = vm_tranformation_init();
-    result.suspension_rest_dist = 0.5f;
-    result.suspension_ray_dist = 0.3f;
-    result.suspension_spring_strength = 30000.0f;
-    result.suspension_spring_dampening = 2500.0f;
-    result.steering_enabled = steering_enabled;
-    result.steering_wheel_mass = wheel_mass;
-    result.steering_wheel_grip = 0.9f;
-    result.acceleration_enabled = acceleration_enabled;
-    result.acceleration_input = 0.0f;
-
-    return (result);
-}
-
 void render_car(speg_draw_call *call, speg_state *state)
 {
     float dt = (float)state->dt;
     float gravity = -9.81f;
     v3 gravity_force = vm_v3(0.0f, gravity, 0.0f);
 
-    float car_top_speed = 10.0f;
+    float car_top_speed = 20.0f;
 
-    static float acceleration_input = 1.0f;
     static float steering_angle = -0.3f;
 
     int i;
@@ -920,8 +918,9 @@ void render_car(speg_draw_call *call, speg_state *state)
     v3 car_color = vm_v3(0.4f, 0.4f, 0.4f);
 
 #define NUM_WHEELS 4
-    wheel wh_front_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, false);
-    wheel wh_front_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, false);
+    /* AWD drive train */
+    wheel wh_front_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, true);
+    wheel wh_front_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, -1.0f), car.mass / NUM_WHEELS, true, true);
     wheel wh_rear_left = wheel_init_with_defaults(vm_v3(-1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true);
     wheel wh_rear_right = wheel_init_with_defaults(vm_v3(1.0f, 0.0f, 1.0f), car.mass / NUM_WHEELS, false, true);
 
@@ -949,33 +948,25 @@ void render_car(speg_draw_call *call, speg_state *state)
     /* For each wheel */
     for (i = 0; i < NUM_WHEELS; ++i)
     {
-        float groundHitY = 0.0f;
-
-        wheel wh = wheels[i];
-
-        float rayLength = wh.suspension_rest_dist + wh.suspension_ray_dist;
+        float current_ground_height = 0.0f;
 
         m4x4 wheel_model;
         v3 wheel_color = vm_v3(1.0f, 0.0f, 0.0f);
 
         /* TODO: check if rotate has to be applied after add !*/
+        wheel wh = wheels[i];
         wh.transform.position = vm_v3_add(car.position, vm_v3_rotate(wh.local_position, car.orientation));
         wh.transform.rotation = car.orientation;
+        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wh.transform), steering_angle), wh.transform.rotation) : car.orientation;
+        wh.acceleration_input = wh.acceleration_enabled ? 1.0f : 0.0f;
+        wh.distance_to_ground = wh.transform.position.y - current_ground_height;
 
-        if (i < 2)
-        {
-            wh.transform.rotation = vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wh.transform), steering_angle), wh.transform.rotation);
-        }
-
-        wh.distance_to_ground = wh.transform.position.y - groundHitY;
-
-        if (wh.distance_to_ground < rayLength)
+        if (wh.distance_to_ground < wh.suspension_rest_dist + wh.suspension_ray_dist)
         {
             wheel_update(
                 &car,
                 &wh,
                 dt,
-                acceleration_input,
                 car_top_speed);
         }
 
