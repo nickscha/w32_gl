@@ -436,7 +436,7 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
         if (!draw)
         {
             /* DISCARD - but in case we want to show discarded objects e.g. simulateCam = true we still render them */
-            if (input->cameraSimulate.endedDown)
+            if (input->cameraSimulate.wasDown)
             {
                 draw = true;
                 targetColor = color_red;
@@ -1124,7 +1124,7 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
     ortho_proj = vm_m4x4_orthographic(0.0f, (float)state->width, 0.0f, (float)state->height, -1.0f, 1.0f);
 
-    if (input.cameraSimulate.endedDown)
+    if (input.cameraSimulate.wasDown)
     {
         /* We set the camera position a bit back in order to see the discarded frustum culling objects (red) in the actual view */
         v3 simulatedCamPos = cam.position;

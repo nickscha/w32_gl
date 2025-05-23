@@ -117,6 +117,7 @@ typedef struct platform_controller_state
 {
     int halfTransitionCount;
     bool endedDown;
+    bool wasDown;
 } platform_controller_state;
 
 #pragma GCC diagnostic push
