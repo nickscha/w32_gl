@@ -1121,38 +1121,39 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
 
     /* Debug mode. */
     {
-        static bool debug_initialized;
+        static bool debug;
         static bool debug_run_step;
 
         if (input.debug_mode.pressed)
         {
-            if (!debug_initialized)
+            if (!debug)
             {
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # DEBUG MODE\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'TAB' to exit.\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'I' to run 1 step.\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
-                debug_initialized = true;
+                debug = true;
             }
             else
             {
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Exit DEBUG MODE\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
-                debug_initialized = false;
+                debug = false;
             }
         }
 
         debug_run_step = input.debug_mode_step.pressed;
 
-        if (debug_initialized && !debug_run_step)
+        if (debug && !debug_run_step)
         {
-            /* Draw static and dynamic scenes */
+            /* Draw existing static and dynamic scenes */
             platformApi->platform_draw(&draw_call_static, projection_view.e);
             platformApi->platform_draw(&draw_call_dynamic, projection_view.e);
             platformApi->platform_draw(&draw_call_dynamic_gui, ortho_proj.e);
             platformApi->platform_draw(&draw_call_text, ortho_proj.e);
+
             return;
         }
     }
