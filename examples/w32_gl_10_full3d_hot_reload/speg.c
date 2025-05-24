@@ -10,9 +10,12 @@ typedef struct speg_controller_input
     platform_controller_state moveRight;
     platform_controller_state moveUp;
     platform_controller_state moveDown;
+
     /* Debug / Dev commands */
     platform_controller_state cameraSimulate;
     platform_controller_state cameraResetPosition;
+    platform_controller_state debug_mode;
+    platform_controller_state debug_mode_step;
 
     bool mouseAttached;
     float mouseScrollOffset;
@@ -33,8 +36,11 @@ speg_controller_input speg_map_controller_input(platform_controller_input *platf
     result.moveRight = platform_input->key_d;
     result.moveUp = platform_input->key_space;
     result.moveDown = platform_input->key_control;
+
     result.cameraSimulate = platform_input->key_f3;
     result.cameraResetPosition = platform_input->key_f5;
+    result.debug_mode = platform_input->key_tab;
+    result.debug_mode_step = platform_input->key_i;
 
     result.mouseAttached = platform_input->mouse_attached;
     result.mouseScrollOffset = platform_input->mouse_offset_scroll;
@@ -436,7 +442,7 @@ void render_cubes(speg_draw_call *call, m4x4 projection, m4x4 view, speg_state *
         if (!draw)
         {
             /* DISCARD - but in case we want to show discarded objects e.g. simulateCam = true we still render them */
-            if (input->cameraSimulate.wasDown)
+            if (input->cameraSimulate.active)
             {
                 draw = true;
                 targetColor = color_red;
@@ -1036,15 +1042,16 @@ static speg_mesh rectangle_text = SPEG_INIT_MESH("rectangle_text", false, rectan
 void speg_update(speg_memory *memory, platform_controller_input *platform_input, speg_platform_api *platformApi)
 {
     static camera cam;
+    static bool debug_initialized;
 
     speg_state *state = (speg_state *)memory->permanentMemory;
     speg_controller_input input;
 
-    m4x4 projection;
-    m4x4 ortho_proj;
-    m4x4 view;
-    m4x4 projection_view;
-    m4x4 view_simulated;
+    static m4x4 projection;
+    static m4x4 ortho_proj;
+    static m4x4 view;
+    static m4x4 projection_view;
+    static m4x4 view_simulated;
 
     assert(memory);
     assert(memory->permanentMemorySize > 0);
@@ -1113,6 +1120,41 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
 
     input = speg_map_controller_input(platform_input);
 
+    if (input.debug_mode.pressed)
+    {
+        if (!debug_initialized)
+        {
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # DEBUG MODE\n");
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'TAB' to exit.\n");
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'I' to run 1 step.\n");
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+            debug_initialized = true;
+        }
+        else
+        {
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Exit DEBUG MODE\n");
+            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+            debug_initialized = false;
+        }
+    }
+
+    {
+        static bool debug_run_step;
+        debug_run_step = input.debug_mode_step.pressed;
+
+        if (debug_initialized && !debug_run_step)
+        {
+            /* Draw static and dynamic scenes */
+            platformApi->platform_draw(&draw_call_static, projection_view.e);
+            platformApi->platform_draw(&draw_call_dynamic, projection_view.e);
+            platformApi->platform_draw(&draw_call_dynamic_gui, ortho_proj.e);
+            platformApi->platform_draw(&draw_call_text, ortho_proj.e);
+            return;
+        }
+    }
+
     /* Reset dynamic draw call buffers */
     draw_call_dynamic.count_instances = 0;
     draw_call_dynamic_gui.count_instances = 0;
@@ -1124,7 +1166,7 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
     view = vm_m4x4_lookAt(cam.position, vm_v3_add(cam.position, cam.front), cam.up);
     ortho_proj = vm_m4x4_orthographic(0.0f, (float)state->width, 0.0f, (float)state->height, -1.0f, 1.0f);
 
-    if (input.cameraSimulate.wasDown)
+    if (input.cameraSimulate.active)
     {
         /* We set the camera position a bit back in order to see the discarded frustum culling objects (red) in the actual view */
         v3 simulatedCamPos = cam.position;

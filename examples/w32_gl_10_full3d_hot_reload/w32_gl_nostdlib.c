@@ -527,22 +527,27 @@ void process_keyboard_message(platform_controller_state *state, bool isDown, boo
 
   if (wasDown && !isDown)
   {
-    state->wasDown = !state->wasDown;
+    state->active = !state->active;
   }
+
+  state->pressed = wasDown;
 }
 
 void processKeyboardMessages(platform_controller_input *oldInput, platform_controller_input *newInput)
 {
   /* Reset mouse offsets*/
+  newInput->mouse_attached = oldInput->mouse_attached;
   newInput->mouse_offset_scroll = 0.0f;
   newInput->mouse_offset_x = 0.0f;
   newInput->mouse_offset_y = 0.0f;
+  newInput->mouse_position_x = oldInput->mouse_position_x;
+  newInput->mouse_position_y = oldInput->mouse_position_y;
 
   for (int i = 0; i < (int)array_size(newInput->keys); ++i)
   {
     newInput->keys[i].endedDown = oldInput->keys[i].endedDown;
-    newInput->keys[i].wasDown = oldInput->keys[i].wasDown;
-    newInput->mouse_attached = oldInput->mouse_attached;
+    newInput->keys[i].active = oldInput->keys[i].active;
+    newInput->keys[i].pressed = false;
   }
 
   MSG message;
@@ -576,9 +581,7 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
     case WM_MOUSEMOVE:
     {
       newInput->mouse_position_x = GET_X_LPARAM(message.lParam);
-      oldInput->mouse_position_x = newInput->mouse_position_x;
       newInput->mouse_position_y = height - GET_Y_LPARAM(message.lParam);
-      oldInput->mouse_position_y = newInput->mouse_position_y;
     }
     break;
     case WM_MOUSEWHEEL:
