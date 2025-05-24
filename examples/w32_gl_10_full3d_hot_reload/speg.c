@@ -1042,7 +1042,6 @@ static speg_mesh rectangle_text = SPEG_INIT_MESH("rectangle_text", false, rectan
 void speg_update(speg_memory *memory, platform_controller_input *platform_input, speg_platform_api *platformApi)
 {
     static camera cam;
-    static bool debug_initialized;
 
     speg_state *state = (speg_state *)memory->permanentMemory;
     speg_controller_input input;
@@ -1120,28 +1119,31 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
 
     input = speg_map_controller_input(platform_input);
 
-    if (input.debug_mode.pressed)
+    /* Debug mode. */
     {
-        if (!debug_initialized)
-        {
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # DEBUG MODE\n");
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'TAB' to exit.\n");
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'I' to run 1 step.\n");
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
-            debug_initialized = true;
-        }
-        else
-        {
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Exit DEBUG MODE\n");
-            platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
-            debug_initialized = false;
-        }
-    }
-
-    {
+        static bool debug_initialized;
         static bool debug_run_step;
+
+        if (input.debug_mode.pressed)
+        {
+            if (!debug_initialized)
+            {
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # DEBUG MODE\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'TAB' to exit.\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'I' to run 1 step.\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                debug_initialized = true;
+            }
+            else
+            {
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Exit DEBUG MODE\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                debug_initialized = false;
+            }
+        }
+
         debug_run_step = input.debug_mode_step.pressed;
 
         if (debug_initialized && !debug_run_step)
