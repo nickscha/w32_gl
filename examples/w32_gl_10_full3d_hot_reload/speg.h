@@ -236,8 +236,13 @@ typedef struct speg_state
 typedef struct speg_memory
 {
     bool initialized;
+
     uint32_t permanentMemorySize;
     void *permanentMemory;
+
+    uint32_t transientMemorySize;
+    void *transientMemory;
+
 } speg_memory;
 
 #ifdef SPEG_IMPORT

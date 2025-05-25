@@ -1128,10 +1128,14 @@ mainCRTStartup(void)
 
   speg_memory memory = {0};
   memory.permanentMemorySize = 1024 * 1024 * 1; /* 1 MB Allocation */
-  memory.permanentMemory = VirtualAlloc(0, memory.permanentMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  memory.transientMemorySize = 1024 * 1024 * 1; /* 1 MB Allocation */
+  memory.permanentMemory = VirtualAlloc(0, memory.permanentMemorySize + memory.transientMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  memory.transientMemory = ((uint8_t *)memory.permanentMemory + memory.permanentMemorySize);
 
   assert(memory.permanentMemorySize > 0);
+  assert(memory.transientMemorySize > 0);
   assert(memory.permanentMemory);
+  assert(memory.transientMemory);
 
   platform_controller_input inputs[2] = {0};
   platform_controller_input *newInput = &inputs[0];
