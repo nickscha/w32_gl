@@ -16,6 +16,7 @@ typedef struct speg_controller_input
     platform_controller_state cameraResetPosition;
     platform_controller_state debug_mode;
     platform_controller_state debug_mode_step;
+    platform_controller_state debug_mode_step_continuously;
 
     bool mouseAttached;
     float mouseScrollOffset;
@@ -41,6 +42,7 @@ speg_controller_input speg_map_controller_input(platform_controller_input *platf
     result.cameraResetPosition = platform_input->key_f5;
     result.debug_mode = platform_input->key_tab;
     result.debug_mode_step = platform_input->key_i;
+    result.debug_mode_step_continuously = platform_input->key_u;
 
     result.mouseAttached = platform_input->mouse_attached;
     result.mouseScrollOffset = platform_input->mouse_offset_scroll;
@@ -1128,23 +1130,24 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
         {
             if (!debug)
             {
-                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] #######################################\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # DEBUG MODE\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'TAB' to exit.\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Press 'I' to run 1 step.\n");
-                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Hold  'U' to continuously run 1 step.\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] #######################################\n");
                 debug = true;
             }
             else
             {
-                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] #######################################\n");
                 platformApi->platform_print_console(__FILE__, __LINE__, "[speg] # Exit DEBUG MODE\n");
-                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] ##########################\n");
+                platformApi->platform_print_console(__FILE__, __LINE__, "[speg] #######################################\n");
                 debug = false;
             }
         }
 
-        debug_run_step = input.debug_mode_step.pressed;
+        debug_run_step = input.debug_mode_step.pressed || input.debug_mode_step_continuously.endedDown;
 
         if (debug && !debug_run_step)
         {
