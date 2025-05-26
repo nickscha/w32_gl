@@ -696,6 +696,12 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
         case 0x11:
           process_keyboard_message(&newInput->key_control, isDown, wasDown);
           break;
+        case 0x12:
+          process_keyboard_message(&newInput->key_alt, isDown, wasDown);
+          break;
+        case 0x14:
+          process_keyboard_message(&newInput->key_capital, isDown, wasDown);
+          break;
         case 0x20:
           process_keyboard_message(&newInput->key_space, isDown, wasDown);
           break;
