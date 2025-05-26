@@ -36,6 +36,7 @@ W32_DECLARE_HANDLE(HICON);
 W32_DECLARE_HANDLE(HBRUSH);
 W32_DECLARE_HANDLE(HMENU);
 W32_DECLARE_HANDLE(HRAWINPUT);
+W32_DECLARE_HANDLE(HMONITOR);
 
 typedef char *va_list;
 typedef HINSTANCE HMODULE;
@@ -265,6 +266,25 @@ typedef struct _PROCESS_MEMORY_COUNTERS_EX
     SIZE_T PrivateUsage;
 } PROCESS_MEMORY_COUNTERS_EX, *PPROCESS_MEMORY_COUNTERS_EX;
 
+typedef struct tagWINDOWPLACEMENT
+{
+    UINT length;
+    UINT flags;
+    UINT showCmd;
+    POINT ptMinPosition;
+    POINT ptMaxPosition;
+    RECT rcNormalPosition;
+    RECT rcDevice;
+} WINDOWPLACEMENT;
+
+typedef struct tagMONITORINFO
+{
+    DWORD cbSize;
+    RECT rcMonitor;
+    RECT rcWork;
+    DWORD dwFlags;
+} MONITORINFO, *LPMONITORINFO;
+
 typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 
 #define MEM_COMMIT 0x00001000
@@ -303,6 +323,7 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define VK_F3 0x72
 #define VK_F4 0x73
 #define VK_F5 0x74
+#define VK_F6 0x75
 #define CS_VREDRAW 0x0001
 #define CS_HREDRAW 0x0002
 #define WS_OVERLAPPED 0x00000000L
@@ -319,9 +340,17 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define WS_CLIPCHILDREN 0x02000000
 #define MAKEINTRESOURCEA(i) ((LPSTR)((unsigned long)((WORD)(i))))
 #define IDC_ARROW MAKEINTRESOURCEA(32512)
+#define HWND_TOP ((HWND)0)
 #define HWND_TOPMOST ((HWND) - 1)
 #define SWP_NOSIZE 0x0001
 #define SWP_NOMOVE 0x0002
+#define SWP_NOOWNERZORDER 0x0200
+#define SWP_FRAMECHANGED 0x0020
+#define SWP_NOZORDER 0x0004
+#define GWL_STYLE -16
+#define MONITOR_DEFAULTTONULL 0x00000000
+#define MONITOR_DEFAULTTOPRIMARY 0x00000001
+#define MONITOR_DEFAULTTONEAREST 0x00000002
 #define SPI_GETWORKAREA 0x0030
 #define LOWORD(l) ((WORD)(((DWORD_PTR)(l)) & 0xffff))
 #define HIWORD(l) ((WORD)((((DWORD_PTR)(l)) >> 16) & 0xffff))
@@ -587,7 +616,20 @@ W32_API(BOOL)
 GetProcessHandleCount(HANDLE hProcess, PDWORD pdwHandleCount);
 W32_API(BOOL)
 K32GetProcessMemoryInfo(HANDLE Process, PPROCESS_MEMORY_COUNTERS_EX ppsmemCounters, DWORD cb);
-
+W32_API(LONG)
+GetWindowLongA(HWND hWnd, int nIndex);
+W32_API(BOOL)
+GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
+W32_API(BOOL)
+GetMonitorInfoA(HMONITOR hMonitor, LPMONITORINFO lpmi);
+W32_API(HMONITOR)
+MonitorFromWindow(HWND hwnd, DWORD dwFlags);
+W32_API(LONG)
+SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);
+W32_API(BOOL)
+SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
+W32_API(BOOL)
+SetWindowPlacement(HWND hWnd, const WINDOWPLACEMENT *lpwndpl);
 #endif
 
 DWORD w32_strlen(const char *str)

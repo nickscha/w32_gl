@@ -471,6 +471,40 @@ void loadCode(void)
   assert(speg_update);
 }
 
+WINDOWPLACEMENT g_wpPrev;
+
+static bool window_initialized;
+
+void toggle_fullscreen(HWND hwnd)
+{
+  DWORD dwStyle = (DWORD)GetWindowLongA(hwnd, GWL_STYLE);
+
+  if (!window_initialized)
+  {
+    g_wpPrev.length = sizeof(g_wpPrev);
+    window_initialized = true;
+  }
+
+  if (dwStyle & WS_OVERLAPPEDWINDOW)
+  {
+    MONITORINFO mi;
+    mi.cbSize = sizeof(mi);
+
+    if (GetWindowPlacement(hwnd, &g_wpPrev) &&
+        GetMonitorInfoA(MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY), &mi))
+    {
+      SetWindowLongA(hwnd, GWL_STYLE, (long)(dwStyle & (DWORD)~WS_OVERLAPPEDWINDOW));
+      SetWindowPos(hwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
+  }
+  else
+  {
+    SetWindowLongA(hwnd, GWL_STYLE, (long)(dwStyle | (DWORD)WS_OVERLAPPEDWINDOW));
+    SetWindowPlacement(hwnd, &g_wpPrev);
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+  }
+}
+
 #define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp) ((int)(short)HIWORD(lp))
 
@@ -828,6 +862,11 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
         {
           vsync = !vsync;
           wglSwapIntervalEXT(vsync);
+        }
+
+        else if (vkCode == VK_F6)
+        {
+          toggle_fullscreen(window);
         }
       }
 
