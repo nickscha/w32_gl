@@ -919,6 +919,14 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
       ClipCursor(&rect);
       ShowCursor(false);
       newInput->mouse_attached = true;
+
+      bool wasDown = ((message.lParam & ((uint32_t)1 << 30)) != 0);
+      bool isDown = ((message.lParam & ((uint32_t)1 << 31)) == 0);
+
+      if (wasDown != isDown)
+      {
+        process_keyboard_message(&newInput->key_mouse_left, isDown, wasDown);
+      }
     }
     break;
 
@@ -935,6 +943,27 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
 
       ShowCursor(true);
       newInput->mouse_attached = false;
+
+      bool wasDown = ((message.lParam & ((uint32_t)1 << 30)) != 0);
+      bool isDown = ((message.lParam & ((uint32_t)1 << 31)) == 0);
+
+      if (wasDown != isDown)
+      {
+        process_keyboard_message(&newInput->key_mouse_right, isDown, wasDown);
+      }
+    }
+    break;
+
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    {
+      bool wasDown = ((message.lParam & ((uint32_t)1 << 30)) != 0);
+      bool isDown = ((message.lParam & ((uint32_t)1 << 31)) == 0);
+
+      if (wasDown != isDown)
+      {
+        process_keyboard_message(&newInput->key_mouse_middle, isDown, wasDown);
+      }
     }
     break;
 

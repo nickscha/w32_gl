@@ -131,9 +131,14 @@ typedef struct platform_controller_input
     /* ################ */
     union
     {
-        platform_controller_state keys[60];
+        platform_controller_state keys[63];
         struct
         {
+            /* Mouse Keys */
+            platform_controller_state key_mouse_left;
+            platform_controller_state key_mouse_right;
+            platform_controller_state key_mouse_middle;
+
             /* Function Keys */
             platform_controller_state key_f1;
             platform_controller_state key_f2;
