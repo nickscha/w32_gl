@@ -473,16 +473,13 @@ void loadCode(void)
 
 WINDOWPLACEMENT g_wpPrev;
 
-static bool window_initialized;
-
 void toggle_fullscreen(HWND hwnd)
 {
   DWORD dwStyle = (DWORD)GetWindowLongA(hwnd, GWL_STYLE);
 
-  if (!window_initialized)
+  if (!g_wpPrev.length)
   {
     g_wpPrev.length = sizeof(g_wpPrev);
-    window_initialized = true;
   }
 
   if (dwStyle & WS_OVERLAPPEDWINDOW)
