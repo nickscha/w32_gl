@@ -806,7 +806,7 @@ typedef struct wheel
 {
     v3 local_position;
 
-    /* Tranform for setting wheel position rotation according to parent (car) position */
+    /* Transform for setting wheel position rotation according to parent (car) position */
     transformation transform;
 
     /* Force 1: Suspension */
@@ -825,7 +825,7 @@ typedef struct wheel
     bool acceleration_enabled;
     float acceleration_input;
 
-    /* Caluclated*/
+    /* Calculated */
     float distance_to_ground;
 
 } wheel;
