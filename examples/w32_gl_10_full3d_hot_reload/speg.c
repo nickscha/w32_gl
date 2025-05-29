@@ -486,13 +486,13 @@ void render_cubes_instanced(speg_draw_call *call, float range)
 
 void render_transformations_test(speg_draw_call *call, speg_state *state)
 {
-    transformation parent = vm_tranformation_init();
-    transformation child = vm_tranformation_init();
-    transformation child2 = vm_tranformation_init();
-    transformation child3 = vm_tranformation_init();
-    transformation child4 = vm_tranformation_init();
-    transformation child41 = vm_tranformation_init();
-    transformation child411 = vm_tranformation_init();
+    transformation parent = vm_transformation_init();
+    transformation child = vm_transformation_init();
+    transformation child2 = vm_transformation_init();
+    transformation child3 = vm_transformation_init();
+    transformation child4 = vm_transformation_init();
+    transformation child41 = vm_transformation_init();
+    transformation child411 = vm_transformation_init();
 
     m4x4 current_transform;
     v3 color;
@@ -835,7 +835,7 @@ wheel wheel_init_with_defaults(v3 local_position, float wheel_mass, bool steerin
     wheel result;
 
     result.local_position = local_position;
-    result.transform = vm_tranformation_init();
+    result.transform = vm_transformation_init();
     result.suspension_rest_dist = 0.5f;
     result.suspension_ray_dist = 0.3f;
     result.suspension_spring_strength = 30000.0f;
@@ -911,7 +911,7 @@ void wheel_update(
 static bool car_initialized;
 static rigid_body car;
 
-void render_car(speg_draw_call *call, speg_state *state)
+void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *platformApi)
 {
     float dt = (float)state->dt;
     float gravity = -9.81f;
@@ -928,6 +928,8 @@ void render_car(speg_draw_call *call, speg_state *state)
 
 #define NUM_WHEELS 4
     static wheel wheels[NUM_WHEELS];
+
+    (void)platformApi;
 
     if (!car_initialized)
     {
@@ -954,7 +956,6 @@ void render_car(speg_draw_call *call, speg_state *state)
     for (i = 0; i < NUM_WHEELS; ++i)
     {
         float current_ground_height = 0.0f;
-
         m4x4 wheel_model;
         v3 wheel_color = vm_v3(1.0f, 0.0f, 0.0f);
 
@@ -962,7 +963,7 @@ void render_car(speg_draw_call *call, speg_state *state)
         wheel wh = wheels[i];
         wh.transform.position = vm_v3_add(car.position, vm_v3_rotate(wh.local_position, car.orientation));
         wh.transform.rotation = car.orientation;
-        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(vm_quat_rotate(vm_transformation_up(&wh.transform), wh.steering_inverted ? -steering_angle : steering_angle), wh.transform.rotation) : car.orientation;
+        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(wh.transform.rotation, vm_quat_rotate(vm_transformation_up(&wh.transform), wh.steering_inverted ? -steering_angle : steering_angle)) : car.orientation;
         wh.acceleration_input = wh.acceleration_enabled ? 1.0f : 0.0f;
         wh.distance_to_ground = wh.transform.position.y - current_ground_height;
 
@@ -995,7 +996,7 @@ void render_car(speg_draw_call *call, speg_state *state)
     render_vector(call, car.position, car.angularVelocity, vm_v3(0.941f, 0.925f, 0.0f));
 
     /* Visualize car not just as a cube. Doesn't affect the physics simulation !*/
-    car_transform = vm_tranformation_init();
+    car_transform = vm_transformation_init();
     car_transform.position = car.position;
     car_transform.position.y += 0.5f;
     car_transform.rotation = car.orientation;
@@ -1191,7 +1192,7 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
     render_transformations_test(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, &input);
     render_text(&draw_call_text, state, platformApi);
-    render_car(&draw_call_dynamic, state);
+    render_car(&draw_call_dynamic, state, platformApi);
 
     state->renderedObjects = (unsigned int)(draw_call_static.count_instances +
                                             draw_call_dynamic.count_instances +
