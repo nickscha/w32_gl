@@ -246,6 +246,10 @@ void speg_float_to_string(float value, char *buffer, int precision)
         *buffer++ = '-';
         value = -value;
     }
+    else
+    {
+        *buffer++ = ' ';
+    }
 
     int_part = (int)value;
     value -= (float)int_part;
@@ -622,7 +626,7 @@ void render_text(speg_draw_call *call, speg_state *state, speg_platform_api *pla
 
     float xOffsetInitial = 40.0f;
     float xOffset = xOffsetInitial;
-    float yOffset = 0.0f;
+    float yOffset = -200.0f;
 
     double startTimeNano;
     double endTimeNano;
@@ -908,10 +912,48 @@ void wheel_update(
         wheel_position);
 }
 
+v2 render_full_text(speg_draw_call *call, speg_state *state, char *str, v3 color, v2 dimensions, v2 offsets)
+{
+    v2 result;
+
+    float xOffset = offsets.x;
+    float yOffset = offsets.y;
+
+    int i;
+
+    for (i = 0; str[i] != '\0'; ++i)
+    {
+        v3 position;
+        m4x4 model;
+        int ascii_code;
+
+        char c = str[i];
+        if (c == '\n')
+        {
+            yOffset -= dimensions.y;
+            xOffset = offsets.x;
+            continue;
+        }
+
+        position = vm_v3(xOffset, ((float)state->height - dimensions.y) - yOffset, 0.0f);
+        model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(dimensions.x, dimensions.y, 1.0f));
+
+        ascii_code = c - 32;
+        speg_draw_call_append(call, &model, &color, ascii_code);
+
+        xOffset += dimensions.x;
+    }
+
+    result.x = xOffset;
+    result.y = yOffset;
+
+    return (result);
+}
+
 static bool car_initialized;
 static rigid_body car;
 
-void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *platformApi)
+void render_car(speg_draw_call *call, speg_draw_call *call_txt, speg_state *state, speg_platform_api *platformApi)
 {
     float dt = (float)state->dt;
     float gravity = -9.81f;
@@ -962,8 +1004,7 @@ void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *plat
         /* TODO: check if rotate has to be applied after add !*/
         wheel wh = wheels[i];
         wh.transform.position = vm_v3_add(car.position, vm_v3_rotate(wh.local_position, car.orientation));
-        wh.transform.rotation = car.orientation;
-        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(wh.transform.rotation, vm_quat_rotate(vm_transformation_up(&wh.transform), wh.steering_inverted ? -steering_angle : steering_angle)) : car.orientation;
+        wh.transform.rotation = wh.steering_enabled ? vm_quat_mul(car.orientation, vm_quat_rotate(vm_transformation_up(&wh.transform), wh.steering_inverted ? -steering_angle : steering_angle)) : car.orientation;
         wh.acceleration_input = wh.acceleration_enabled ? 1.0f : 0.0f;
         wh.distance_to_ground = wh.transform.position.y - current_ground_height;
 
@@ -981,12 +1022,77 @@ void render_car(speg_draw_call *call, speg_state *state, speg_platform_api *plat
         render_vector(call, wh.transform.position, vm_transformation_forward(&wh.transform), vm_v3(0.0f, 0.0f, 1.0f));
         render_vector(call, wh.transform.position, vm_transformation_right(&wh.transform), vm_v3(1.0f, 0.0f, 0.0f));
 
+        /* Text Wheel information */
+        {
+            v2 txt_dimensions = vm_v2_mulf(vm_v2(17.0f, 32.0f), 0.6f);
+            v2 txt_offset = vm_v2(10.0f, 20.0f + ((float)(i + 1) * txt_dimensions.y));
+            v3 txt_color = vm_v3_one;
+            char xBuffer[32], yBuffer[32], zBuffer[32], wBuffer[32], iBuffer[6], outBuffer[512];
+
+            speg_float_to_string(wh.transform.position.x, xBuffer, 6);
+            speg_float_to_string(wh.transform.position.y, yBuffer, 6);
+            speg_float_to_string(wh.transform.position.z, zBuffer, 6);
+            speg_float_to_string(wh.distance_to_ground, wBuffer, 6);
+            speg_float_to_string((float)i, iBuffer, 0);
+
+            platformApi->platform_format_string(outBuffer, "   [wh-%i] %10s %10s %10s dtg: %10s\n", i, xBuffer, yBuffer, zBuffer, wBuffer);
+            txt_offset = render_full_text(call_txt, state, outBuffer, txt_color, txt_dimensions, txt_offset);
+        }
+
         wh.transform.scale = vm_v3f(0.2f);
         wheel_model = vm_transformation_matrix(&wh.transform);
         speg_draw_call_append(call, &wheel_model, &wheel_color, default_texture_index);
     }
 
     rigid_body_integrate(&car, dt);
+
+    /* Text Car information */
+    {
+        v2 txt_dimensions = vm_v2_mulf(vm_v2(17.0f, 32.0f), 0.6f);
+        v2 txt_offset = vm_v2(10.0f, 20.0f + ((float)(4 + 1) * txt_dimensions.y));
+        v3 txt_color = vm_v3_one;
+        char xBuffer[32], yBuffer[32], zBuffer[32], wBuffer[32], outBuffer[512];
+
+        speg_float_to_string(car.position.x, xBuffer, 6);
+        speg_float_to_string(car.position.y, yBuffer, 6);
+        speg_float_to_string(car.position.z, zBuffer, 6);
+
+        platformApi->platform_format_string(outBuffer, "[car_pos] %10s %10s %10s\n", xBuffer, yBuffer, zBuffer);
+        render_full_text(call_txt, state, outBuffer, txt_color, txt_dimensions, txt_offset);
+
+        speg_float_to_string(car.orientation.x, xBuffer, 6);
+        speg_float_to_string(car.orientation.y, yBuffer, 6);
+        speg_float_to_string(car.orientation.z, zBuffer, 6);
+        speg_float_to_string(car.orientation.w, wBuffer, 6);
+
+        txt_offset = vm_v2(10.0f, 20.0f + ((float)(5 + 1) * txt_dimensions.y));
+
+        platformApi->platform_format_string(outBuffer, "[car_rot] %10s %10s %10s %10s\n", xBuffer, yBuffer, zBuffer, wBuffer);
+        render_full_text(call_txt, state, outBuffer, txt_color, txt_dimensions, txt_offset);
+
+        speg_float_to_string(car.velocity.x, xBuffer, 6);
+        speg_float_to_string(car.velocity.y, yBuffer, 6);
+        speg_float_to_string(car.velocity.z, zBuffer, 6);
+
+        txt_offset = vm_v2(10.0f, 20.0f + ((float)(6 + 1) * txt_dimensions.y));
+        platformApi->platform_format_string(outBuffer, "[car_vel] %10s %10s %10s\n", xBuffer, yBuffer, zBuffer);
+        render_full_text(call_txt, state, outBuffer, txt_color, txt_dimensions, txt_offset);
+
+        speg_float_to_string(car.angularVelocity.x, xBuffer, 6);
+        speg_float_to_string(car.angularVelocity.y, yBuffer, 6);
+        speg_float_to_string(car.angularVelocity.z, zBuffer, 6);
+
+        txt_offset = vm_v2(10.0f, 20.0f + ((float)(7 + 1) * txt_dimensions.y));
+        platformApi->platform_format_string(outBuffer, "[car_ang] %10s %10s %10s\n", xBuffer, yBuffer, zBuffer);
+        render_full_text(call_txt, state, outBuffer, txt_color, txt_dimensions, txt_offset);
+
+        txt_offset = vm_v2(10.0f, 20.0f + ((float)(8 + 1) * txt_dimensions.y));
+
+        speg_float_to_string(vm_v3_length(car.velocity), xBuffer, 6);
+
+        platformApi->platform_format_string(outBuffer, "[car_spd] %10s\n", xBuffer);
+        render_full_text(call_txt, state, outBuffer, txt_color, txt_dimensions, txt_offset);
+    }
 
     /* Visualizing the car up, forward, right vector */
     render_vector(call, car.position, vm_v3_mulf(rigid_body_up(&car), 2.0f), vm_v3(0.0f, 1.0f, 0.0f));
@@ -1192,7 +1298,7 @@ void speg_update(speg_memory *memory, platform_controller_input *platform_input,
     render_transformations_test(&draw_call_dynamic, state);
     render_gui_rectangle(&draw_call_dynamic_gui, state, &input);
     render_text(&draw_call_text, state, platformApi);
-    render_car(&draw_call_dynamic, state, platformApi);
+    render_car(&draw_call_dynamic, &draw_call_text, state, platformApi);
 
     state->renderedObjects = (unsigned int)(draw_call_static.count_instances +
                                             draw_call_dynamic.count_instances +

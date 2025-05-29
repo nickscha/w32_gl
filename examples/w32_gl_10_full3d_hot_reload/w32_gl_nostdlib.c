@@ -425,6 +425,14 @@ void platform_print_console(const char *file, const int line, char *formatString
   win32_printf(output);
 }
 
+void platform_format_string(char *buffer, char *formatString, ...)
+{
+  va_list args;
+  va_start(args, formatString);
+  wvsprintfA(buffer, formatString, args);
+  va_end(args);
+}
+
 typedef struct speg_code
 {
   HINSTANCE hDLL;
@@ -1193,6 +1201,7 @@ mainCRTStartup(void)
   speg_platform_api platformApi = {0};
   platformApi.platform_draw = platform_draw;
   platformApi.platform_print_console = platform_print_console;
+  platformApi.platform_format_string = platform_format_string;
   platformApi.platform_sleep = Sleep;
   platformApi.platform_perf_current_cycle_count = w32_rdtsc;
   platformApi.platform_perf_current_time_nanoseconds = platform_perf_current_time_nanoseconds;
