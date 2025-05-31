@@ -806,6 +806,44 @@ void render_vector(speg_draw_call *call, v3 base_position, v3 vector, v3 color)
     speg_draw_call_append(call, &model, &color, default_texture_index);
 }
 
+v2 render_full_text(speg_draw_call *call, speg_state *state, char *str, v3 color, v2 dimensions, v2 offsets)
+{
+    v2 result;
+
+    float xOffset = offsets.x;
+    float yOffset = offsets.y;
+
+    int i;
+
+    for (i = 0; str[i] != '\0'; ++i)
+    {
+        v3 position;
+        m4x4 model;
+        int ascii_code;
+
+        char c = str[i];
+        if (c == '\n')
+        {
+            yOffset -= dimensions.y;
+            xOffset = offsets.x;
+            continue;
+        }
+
+        position = vm_v3(xOffset, ((float)state->height - dimensions.y) - yOffset, 0.0f);
+        model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(dimensions.x, dimensions.y, 1.0f));
+
+        ascii_code = c - 32;
+        speg_draw_call_append(call, &model, &color, ascii_code);
+
+        xOffset += dimensions.x;
+    }
+
+    result.x = xOffset;
+    result.y = yOffset;
+
+    return (result);
+}
+
 typedef struct wheel
 {
     v3 local_position;
@@ -858,14 +896,14 @@ void wheel_update(
     rigid_body *car,
     wheel *wh,
     float dt,
-    float car_top_speed)
+    float car_top_speed,
+    int index,
+    speg_draw_call *call_txt,
+    speg_state *state,
+    speg_platform_api *platformApi)
 {
     v3 wheel_position = wh->transform.position;
     v3 wheel_world_vel = rigid_body_point_velocity(car, wheel_position);
-
-    v3 force_suspension = vm_v3_zero;
-    v3 force_steering = vm_v3_zero;
-    v3 force_acceleration = vm_v3_zero;
 
     /* Force 1: calculate suspension force*/
     {
@@ -876,7 +914,21 @@ void wheel_update(
         float velocity = vm_v3_dot(spring_dir, wheel_world_vel);
         float force = (offset * wh->suspension_spring_strength) - (velocity * wh->suspension_spring_dampening);
 
-        force_suspension = vm_v3_mulf(spring_dir, force);
+        v3 force_suspension = vm_v3_mulf(spring_dir, force);
+
+        /* Text rendering force information */
+        {
+            char xBuffer[32], yBuffer[32], zBuffer[32], outBuffer[256];
+            v2 txt_dimensions = vm_v2_mulf(vm_v2(17.0f, 32.0f), 0.6f);
+            v2 txt_offset = vm_v2(10.0f, 200.0f + ((float)(index + 1) * txt_dimensions.y));
+            speg_float_to_string(force_suspension.x, xBuffer, 6);
+            speg_float_to_string(force_suspension.y, yBuffer, 6);
+            speg_float_to_string(force_suspension.z, zBuffer, 6);
+            platformApi->platform_format_string(outBuffer, "[wh-%i]   force_suspension: %14s %14s %14s", index, xBuffer, yBuffer, zBuffer);
+            render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
+        }
+
+        rigid_body_apply_force_at_position(car, force_suspension, wheel_position);
     }
 
     /* Force 2: calculate steering force */
@@ -890,7 +942,21 @@ void wheel_update(
         float desired_velocity_change = -steering_vel * wh->steering_wheel_grip;
         float desired_acceleration = desired_velocity_change / dt;
 
-        force_steering = vm_v3_mulf(steering_dir, wh->steering_wheel_mass * desired_acceleration);
+        v3 force_steering = vm_v3_mulf(steering_dir, wh->steering_wheel_mass * desired_acceleration);
+
+        /* Text rendering force information */
+        {
+            char xBuffer[32], yBuffer[32], zBuffer[32], outBuffer[256];
+            v2 txt_dimensions = vm_v2_mulf(vm_v2(17.0f, 32.0f), 0.6f);
+            v2 txt_offset = vm_v2(10.0f, 300.0f + ((float)(index + 1) * txt_dimensions.y));
+            speg_float_to_string(force_steering.x, xBuffer, 6);
+            speg_float_to_string(force_steering.y, yBuffer, 6);
+            speg_float_to_string(force_steering.z, zBuffer, 6);
+            platformApi->platform_format_string(outBuffer, "[wh-%i]     force_steering: %14s %14s %14s", index, xBuffer, yBuffer, zBuffer);
+            render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
+        }
+
+        rigid_body_apply_force_at_position(car, force_steering, wheel_position);
     }
 
     /* Force 3: acceleration / braking */
@@ -902,52 +968,22 @@ void wheel_update(
         float normalized_speed = vm_clamp01f(vm_absf(car_speed) / car_top_speed);
         float available_torque = simple_power_curve_evaluate(normalized_speed) * wh->acceleration_input;
 
-        force_acceleration = vm_v3_mulf(acceleration_dir, available_torque);
-    }
+        v3 force_acceleration = vm_v3_mulf(acceleration_dir, available_torque);
 
-    /* Finally add all three forces together and apply them to the rigid body at the specified position */
-    rigid_body_apply_force_at_position(
-        car,
-        vm_v3_add(vm_v3_add(force_suspension, force_steering), force_acceleration),
-        wheel_position);
-}
-
-v2 render_full_text(speg_draw_call *call, speg_state *state, char *str, v3 color, v2 dimensions, v2 offsets)
-{
-    v2 result;
-
-    float xOffset = offsets.x;
-    float yOffset = offsets.y;
-
-    int i;
-
-    for (i = 0; str[i] != '\0'; ++i)
-    {
-        v3 position;
-        m4x4 model;
-        int ascii_code;
-
-        char c = str[i];
-        if (c == '\n')
+        /* Text rendering force information */
         {
-            yOffset -= dimensions.y;
-            xOffset = offsets.x;
-            continue;
+            char xBuffer[32], yBuffer[32], zBuffer[32], outBuffer[256];
+            v2 txt_dimensions = vm_v2_mulf(vm_v2(17.0f, 32.0f), 0.6f);
+            v2 txt_offset = vm_v2(10.0f, 400.0f + ((float)(index + 1) * txt_dimensions.y));
+            speg_float_to_string(force_acceleration.x, xBuffer, 6);
+            speg_float_to_string(force_acceleration.y, yBuffer, 6);
+            speg_float_to_string(force_acceleration.z, zBuffer, 6);
+            platformApi->platform_format_string(outBuffer, "[wh-%i] force_acceleration: %14s %14s %14s", index, xBuffer, yBuffer, zBuffer);
+            render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
         }
 
-        position = vm_v3(xOffset, ((float)state->height - dimensions.y) - yOffset, 0.0f);
-        model = vm_m4x4_scale(vm_m4x4_translate(vm_m4x4_identity, position), vm_v3(dimensions.x, dimensions.y, 1.0f));
-
-        ascii_code = c - 32;
-        speg_draw_call_append(call, &model, &color, ascii_code);
-
-        xOffset += dimensions.x;
+        rigid_body_apply_force_at_position(car, force_acceleration, wheel_position);
     }
-
-    result.x = xOffset;
-    result.y = yOffset;
-
-    return (result);
 }
 
 static bool car_initialized;
@@ -1014,7 +1050,11 @@ void render_car(speg_draw_call *call, speg_draw_call *call_txt, speg_state *stat
                 &car,
                 &wh,
                 dt,
-                car_top_speed);
+                car_top_speed,
+                i,
+                call_txt,
+                state,
+                platformApi);
         }
 
         /* Visualizing the wheel up, forward, right vector */
@@ -1042,6 +1082,24 @@ void render_car(speg_draw_call *call, speg_draw_call *call_txt, speg_state *stat
         wh.transform.scale = vm_v3f(0.2f);
         wheel_model = vm_transformation_matrix(&wh.transform);
         speg_draw_call_append(call, &wheel_model, &wheel_color, default_texture_index);
+    }
+
+    /* Car information rendering */
+    {
+        char xBuffer[32], yBuffer[32], zBuffer[32], outBuffer[256];
+        v2 txt_dimensions = vm_v2_mulf(vm_v2(17.0f, 32.0f), 0.6f);
+        v2 txt_offset = vm_v2(10.0f, 520.0f + txt_dimensions.y);
+        speg_float_to_string(car.force.x, xBuffer, 6);
+        speg_float_to_string(car.force.y, yBuffer, 6);
+        speg_float_to_string(car.force.z, zBuffer, 6);
+        platformApi->platform_format_string(outBuffer, " [car_force] %14s %14s %14s\n", xBuffer, yBuffer, zBuffer);
+        txt_offset = render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
+
+        speg_float_to_string(car.torque.x, xBuffer, 6);
+        speg_float_to_string(car.torque.y, yBuffer, 6);
+        speg_float_to_string(car.torque.z, zBuffer, 6);
+        platformApi->platform_format_string(outBuffer, "[car_torque] %14s %14s %14s", xBuffer, yBuffer, zBuffer);
+        render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
     }
 
     rigid_body_integrate(&car, dt);
@@ -1134,7 +1192,7 @@ static float all_dynamic_gui_colors[MAX_DYNAMIC_GUI_INSTANCES * VM_V3_ELEMENT_CO
 static int all_dynamic_gui_texture_indices[MAX_DYNAMIC_GUI_INSTANCES];
 static speg_draw_call draw_call_dynamic_gui = {0};
 
-#define MAX_DYNAMIC_TEXT_INSTANCES 1024
+#define MAX_DYNAMIC_TEXT_INSTANCES 2048
 static float all_text_models[MAX_DYNAMIC_TEXT_INSTANCES * VM_M4X4_ELEMENT_COUNT];
 static float all_text_colors[MAX_DYNAMIC_TEXT_INSTANCES * VM_V3_ELEMENT_COUNT];
 static int all_text_indices[MAX_DYNAMIC_TEXT_INSTANCES];
