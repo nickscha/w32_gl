@@ -849,11 +849,6 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
           globalPause = !globalPause;
         }
 
-        else if (vkCode == VK_RETURN || vkCode == VK_ESCAPE)
-        {
-          globalRunning = false;
-        }
-
         else if (vkCode == VK_F1)
         {
           wireframeMode = !wireframeMode;
@@ -883,7 +878,7 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
 
       bool altKeyWasDown = ((message.lParam & ((uint32_t)1 << 29)) != 0);
 
-      if ((vkCode == VK_F4) && altKeyWasDown)
+      if (vkCode == VK_RETURN || vkCode == VK_ESCAPE || ((vkCode == VK_F4) && altKeyWasDown))
       {
         globalRunning = false;
       }
