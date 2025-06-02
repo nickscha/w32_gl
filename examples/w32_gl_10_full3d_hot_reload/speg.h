@@ -121,6 +121,7 @@ typedef struct platform_controller_state
     bool endedDown;
     bool active;
     bool pressed;
+
 } platform_controller_state;
 
 #pragma GCC diagnostic push
@@ -184,7 +185,6 @@ typedef struct platform_controller_input
             /* Alphanumeric */
             platform_controller_state key_q;
             platform_controller_state key_w;
-
             platform_controller_state key_e;
             platform_controller_state key_r;
             platform_controller_state key_t;
