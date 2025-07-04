@@ -1,6 +1,5 @@
 #include "speg.h"
 #include "vm.h"
-#include "rigid_body.h"
 
 typedef struct speg_controller_input
 {
@@ -903,7 +902,7 @@ void wheel_update(
     speg_platform_api *platformApi)
 {
     v3 wheel_position = wh->transform.position;
-    v3 wheel_world_vel = rigid_body_point_velocity(car, wheel_position);
+    v3 wheel_world_vel = vm_rigid_body_point_velocity(car, wheel_position);
 
     /* Force 1: calculate suspension force*/
     {
@@ -928,7 +927,7 @@ void wheel_update(
             render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
         }
 
-        rigid_body_apply_force_at_position(car, force_suspension, wheel_position);
+        vm_rigid_body_apply_force_at_position(car, force_suspension, wheel_position);
     }
 
     /* Force 2: calculate steering force */
@@ -956,7 +955,7 @@ void wheel_update(
             render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
         }
 
-        rigid_body_apply_force_at_position(car, force_steering, wheel_position);
+        vm_rigid_body_apply_force_at_position(car, force_steering, wheel_position);
     }
 
     /* Force 3: acceleration / braking */
@@ -964,7 +963,7 @@ void wheel_update(
         /* world-space direction of the acceleration/braking force. */
         v3 acceleration_dir = vm_transformation_forward(&wh->transform);
 
-        float car_speed = vm_v3_dot(rigid_body_forward(car), car->velocity);
+        float car_speed = vm_v3_dot(vm_rigid_body_forward(car), car->velocity);
         float normalized_speed = vm_clamp01f(vm_absf(car_speed) / car_top_speed);
         float available_torque = simple_power_curve_evaluate(normalized_speed) * wh->acceleration_input;
 
@@ -982,7 +981,7 @@ void wheel_update(
             render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
         }
 
-        rigid_body_apply_force_at_position(car, force_acceleration, wheel_position);
+        vm_rigid_body_apply_force_at_position(car, force_acceleration, wheel_position);
     }
 }
 
@@ -1011,7 +1010,7 @@ void render_car(speg_draw_call *call, speg_draw_call *call_txt, speg_state *stat
 
     if (!car_initialized)
     {
-        car = rigid_body_init(
+        car = vm_rigid_body_init(
             vm_v3(0.0f, 5.0f, 0.0f),         /* car position */
             vm_quat(0.0f, 0.0f, 0.0f, 1.0f), /* car orientation */
             1200.0f,                         /* car mass */
@@ -1102,7 +1101,7 @@ void render_car(speg_draw_call *call, speg_draw_call *call_txt, speg_state *stat
         render_full_text(call_txt, state, outBuffer, vm_v3_one, txt_dimensions, txt_offset);
     }
 
-    rigid_body_integrate(&car, dt);
+    vm_rigid_body_integrate(&car, dt);
 
     /* Text Car information */
     {
@@ -1153,9 +1152,9 @@ void render_car(speg_draw_call *call, speg_draw_call *call_txt, speg_state *stat
     }
 
     /* Visualizing the car up, forward, right vector */
-    render_vector(call, car.position, vm_v3_mulf(rigid_body_up(&car), 2.0f), vm_v3(0.0f, 1.0f, 0.0f));
-    render_vector(call, car.position, vm_v3_mulf(rigid_body_forward(&car), 2.0f), vm_v3(0.0f, 0.0f, 1.0f));
-    render_vector(call, car.position, vm_v3_mulf(rigid_body_right(&car), 2.0f), vm_v3(1.0f, 0.0f, 0.0f));
+    render_vector(call, car.position, vm_v3_mulf(vm_rigid_body_up(&car), 2.0f), vm_v3(0.0f, 1.0f, 0.0f));
+    render_vector(call, car.position, vm_v3_mulf(vm_rigid_body_forward(&car), 2.0f), vm_v3(0.0f, 0.0f, 1.0f));
+    render_vector(call, car.position, vm_v3_mulf(vm_rigid_body_right(&car), 2.0f), vm_v3(1.0f, 0.0f, 0.0f));
     render_vector(call, car.position, car.velocity, vm_v3(0.941f, 0.925f, 0.0f));
     render_vector(call, car.position, car.angularVelocity, vm_v3(0.941f, 0.925f, 0.0f));
 
