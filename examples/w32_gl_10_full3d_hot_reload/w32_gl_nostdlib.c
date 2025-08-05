@@ -31,7 +31,7 @@ static bool wireframeMode = false;
 static int width = 800;
 static int height = 600;
 static double dt = 0.0;
-HWND window;
+void *window;
 
 static unsigned int drawCallsPerFrame = 0;
 static int occludedObjectsPerFrame = 0;
@@ -42,12 +42,12 @@ typedef struct File
   char *content;
 } File;
 
-File w32_read_entire_file(const char *path)
+File w32_read_entire_file(char *path)
 {
   File tmp = {0};
 
-  HANDLE hFile;
-  DWORD fileSize, bytesRead;
+  void *hFile;
+  unsigned long fileSize, bytesRead;
   char *buffer;
 
   hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -94,8 +94,8 @@ File w32_read_entire_file(const char *path)
   return tmp;
 }
 
-static const FILETIME empty = {0, 0};
-FILETIME w32_file_mod_time(const char *file)
+static FILETIME empty = {0, 0};
+FILETIME w32_file_mod_time(char *file)
 {
   WIN32_FILE_ATTRIBUTE_DATA fad;
   return GetFileAttributesExA(file, GetFileExInfoStandard, &fad) ? fad.ftLastWriteTime : empty;
@@ -119,7 +119,7 @@ typedef struct speg_shaders
 
 static speg_shaders shaders;
 
-unsigned int shader_compile(char *shaderCode, GLenum shaderType)
+unsigned int shader_compile(char *shaderCode, unsigned int shaderType)
 {
 
   unsigned int shaderId = glCreateShader(shaderType);
@@ -192,16 +192,16 @@ void shader_load_all(void)
   shaders.instanced = shader_load("test_instanced.vs", "test_instanced.fs");
 }
 
-static const int sizeVec2 = sizeof(float) * 2;
-static const int sizeVec3 = sizeof(float) * 3;
-static const int sizeM4x4 = sizeof(float) * 16;
+static int sizeVec2 = sizeof(float) * 2;
+static int sizeVec3 = sizeof(float) * 3;
+static int sizeM4x4 = sizeof(float) * 16;
 
 static bool initialized_gl = false;
-static GLint uniformLocationProjectionView = -1;
-static GLint uniformLocationAtlasTexture = -1;
-static GLint uniformLocationAtlasRows = -1;
-static GLint uniformLocationAtlasColumns = -1;
-static GLuint font_texture;
+static int uniformLocationProjectionView = -1;
+static int uniformLocationAtlasTexture = -1;
+static int uniformLocationAtlasRows = -1;
+static int uniformLocationAtlasColumns = -1;
+static unsigned int font_texture;
 
 static unsigned char font_atlas[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -412,7 +412,7 @@ double platform_perf_current_time_nanoseconds(void)
 }
 
 #include "stdarg.h"
-void platform_print_console(const char *file, const int line, char *formatString, ...)
+void platform_print_console(char *file, int line, char *formatString, ...)
 {
   char output[512];
   wsprintfA(output, "%s:%d ", file, line);
@@ -435,7 +435,7 @@ void platform_format_string(char *buffer, char *formatString, ...)
 
 typedef struct speg_code
 {
-  HINSTANCE hDLL;
+  void *hDLL;
   FILETIME lastWriteTime;
   char *dllName;
 } speg_code;
@@ -445,7 +445,7 @@ static speg_code code;
 void loadCode(void)
 {
   char *dllName = "speg.dll";
-  const char *dllTempName = "speg_temp.dll";
+  char *dllTempName = "speg_temp.dll";
 
   win32_print_console("[win32] load code: %s -> %s\n", dllName, dllTempName);
 
@@ -481,9 +481,9 @@ void loadCode(void)
 
 WINDOWPLACEMENT g_wpPrev;
 
-void toggle_fullscreen(HWND hwnd)
+void toggle_fullscreen(void *hwnd)
 {
-  DWORD dwStyle = (DWORD)GetWindowLongA(hwnd, GWL_STYLE);
+  unsigned long dwStyle = (unsigned long)GetWindowLongA(hwnd, GWL_STYLE);
 
   if (!g_wpPrev.length)
   {
@@ -498,13 +498,13 @@ void toggle_fullscreen(HWND hwnd)
     if (GetWindowPlacement(hwnd, &g_wpPrev) &&
         GetMonitorInfoA(MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY), &mi))
     {
-      SetWindowLongA(hwnd, GWL_STYLE, (long)(dwStyle & (DWORD)~WS_OVERLAPPEDWINDOW));
+      SetWindowLongA(hwnd, GWL_STYLE, (long)(dwStyle & (unsigned long)~WS_OVERLAPPEDWINDOW));
       SetWindowPos(hwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
     }
   }
   else
   {
-    SetWindowLongA(hwnd, GWL_STYLE, (long)(dwStyle | (DWORD)WS_OVERLAPPEDWINDOW));
+    SetWindowLongA(hwnd, GWL_STYLE, (long)(dwStyle | (unsigned long)WS_OVERLAPPEDWINDOW));
     SetWindowPlacement(hwnd, &g_wpPrev);
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
   }
@@ -513,9 +513,9 @@ void toggle_fullscreen(HWND hwnd)
 #define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp) ((int)(short)HIWORD(lp))
 
-static LRESULT W32_CALLBACK w32_window_callback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+static LONG_PTR W32_CALLBACK w32_window_callback(void *window, unsigned int message, UINT_PTR wParam, LONG_PTR lParam)
 {
-  LRESULT result = 0;
+  LONG_PTR result = 0;
 
   switch (message)
   {
@@ -527,8 +527,8 @@ static LRESULT W32_CALLBACK w32_window_callback(HWND window, UINT message, WPARA
 
   case WM_SIZE:
   {
-    int newWidth = LOWORD((DWORD)lParam);
-    int newHeight = HIWORD((DWORD)lParam);
+    int newWidth = LOWORD((unsigned long)lParam);
+    int newHeight = HIWORD((unsigned long)lParam);
 
     width = newWidth;
     height = newHeight;
@@ -597,16 +597,16 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
     case WM_INPUT:
     {
       /* Handle raw input */
-      UINT dwSize = 0;
-      GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+      unsigned int dwSize = 0;
+      GetRawInputData((void *)message.lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
 
       /* Ensure the size is within our fixed buffer size */
       assert(dwSize <= 64);
 
-      BYTE lpb[64];
+      unsigned char lpb[64];
 
       /* Get the raw input data into the fixed buffer */
-      assert(GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
+      assert(GetRawInputData((void *)message.lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
 
       RAWINPUT *raw = (RAWINPUT *)lpb;
 
@@ -642,7 +642,7 @@ void processKeyboardMessages(platform_controller_input *oldInput, platform_contr
     case WM_KEYDOWN:
     case WM_KEYUP:
     {
-      WPARAM vkCode = message.wParam;
+      UINT_PTR vkCode = message.wParam;
       bool wasDown = ((message.lParam & ((uint32_t)1 << 30)) != 0);
       bool isDown = ((message.lParam & ((uint32_t)1 << 31)) == 0);
 
@@ -991,7 +991,7 @@ int
 mainCRTStartup(void)
 {
 
-  HINSTANCE instance = {0};
+  void *instance = {0};
   WNDCLASSA windowClass = {0};
 
   windowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -1008,7 +1008,7 @@ mainCRTStartup(void)
   /***********************/
   /*OPENGL INITIALIZATION*/
   /***********************/
-  HWND fakeWND = CreateWindowExA(
+  void *fakeWND = CreateWindowExA(
       0,
       windowClass.lpszClassName,
       windowClass.lpszClassName,
@@ -1023,7 +1023,7 @@ mainCRTStartup(void)
     return 1;
   }
 
-  HDC fakeDC = GetDC(fakeWND);
+  void *fakeDC = GetDC(fakeWND);
 
   PIXELFORMATDESCRIPTOR fakePFD = {0};
   fakePFD.nSize = sizeof(fakePFD);
@@ -1034,7 +1034,7 @@ mainCRTStartup(void)
   fakePFD.cAlphaBits = 8;
   fakePFD.cDepthBits = 24;
 
-  const int fakePFDID = ChoosePixelFormat(fakeDC, &fakePFD);
+  int fakePFDID = ChoosePixelFormat(fakeDC, &fakePFD);
   if (!fakePFDID)
   {
     return 1;
@@ -1045,7 +1045,7 @@ mainCRTStartup(void)
     return 1;
   }
 
-  HGLRC fakeRC = wglCreateContext(fakeDC);
+  void *fakeRC = wglCreateContext(fakeDC);
 
   if (!fakeRC)
   {
@@ -1063,7 +1063,7 @@ mainCRTStartup(void)
   }
 
   /* Find out center location of the window*/
-  DWORD windowStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME;
+  unsigned long windowStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME;
 
   RECT rect = {0, 0, width, height};
   AdjustWindowRect(&rect, windowStyle, false);
@@ -1088,7 +1088,7 @@ mainCRTStartup(void)
   /* Modal window */
   SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
-  HDC dc = GetDC(window);
+  void *dc = GetDC(window);
 
   int pixelAttribs[] = {
       WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -1105,8 +1105,8 @@ mainCRTStartup(void)
       0};
 
   int pixelFormatID;
-  UINT numFormats;
-  const BOOL status = wglChoosePixelFormatARB(dc, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
+  unsigned int numFormats;
+  int status = wglChoosePixelFormatARB(dc, pixelAttribs, 0, 1, &pixelFormatID, &numFormats);
 
   if (!status || !numFormats)
   {
@@ -1125,7 +1125,7 @@ mainCRTStartup(void)
       WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
       0};
 
-  HGLRC rc = wglCreateContextAttribsARB(dc, 0, contextAttribs);
+  void *rc = wglCreateContextAttribsARB(dc, 0, contextAttribs);
   if (!rc)
   {
     return 1;
@@ -1141,8 +1141,8 @@ mainCRTStartup(void)
     return 1;
   }
 
-  LPCSTR glRenderer = (LPCSTR)glGetString(GL_RENDERER);
-  LPCSTR glVersion = (LPCSTR)glGetString(GL_VERSION);
+  char *glRenderer = (char *)glGetString(GL_RENDERER);
+  char *glVersion = (char *)glGetString(GL_VERSION);
 
   if (wglSwapIntervalEXT)
   {
@@ -1216,7 +1216,7 @@ mainCRTStartup(void)
   platform_controller_input *newInput = &inputs[0];
   platform_controller_input *oldInput = &inputs[1];
 
-  HANDLE currentProc = GetCurrentProcess();
+  void *currentProc = GetCurrentProcess();
 
   while (globalRunning)
   {
@@ -1291,10 +1291,10 @@ mainCRTStartup(void)
     QueryPerformanceCounter(&endCounter);
 
     unsigned long cyclesElapsed = endCycleCount - lastCycleCount;
-    LONGLONG counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
+    LONG_PTR counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
     int32_t msPerFrame = (int32_t)(((1000 * counterElapsed) / perfCountFrequency.QuadPart));
     double msPassedPerFrame = ((1000.0 * (double)counterElapsed) / (double)perfCountFrequency.QuadPart);
-    LONGLONG fps = perfCountFrequency.QuadPart / (counterElapsed == 0 ? 1 : counterElapsed);
+    LONG_PTR fps = perfCountFrequency.QuadPart / (counterElapsed == 0 ? 1 : counterElapsed);
 
     dt = ((double)(counterElapsed) / (double)perfCountFrequency.QuadPart);
 

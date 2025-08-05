@@ -91,7 +91,7 @@ typedef struct speg_draw_call
 /*****************************/
 /* Platform provided methods */
 /*****************************/
-typedef void (*func_speg_platform_print_console)(const char *file, const int line, char *formatString, ...);
+typedef void (*func_speg_platform_print_console)(char *file, int line, char *formatString, ...);
 typedef void (*func_speg_platform_format_string)(char *buffer, char *formatString, ...);
 typedef void (*func_speg_platform_sleep)(unsigned long milliseconds);
 typedef void (*func_speg_platform_draw)(speg_draw_call *draw_call, float uniformProjectionView[16]);

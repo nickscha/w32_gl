@@ -23,122 +23,57 @@ LICENSE
         *(volatile int *)0 = 0; \
     }
 
-#define W32_DECLARE_HANDLE(name) \
-    struct name##__              \
-    {                            \
-        int unused;              \
-    };                           \
-    typedef struct name##__ *name
-
-W32_DECLARE_HANDLE(HWND);
-W32_DECLARE_HANDLE(HINSTANCE);
-W32_DECLARE_HANDLE(HICON);
-W32_DECLARE_HANDLE(HBRUSH);
-W32_DECLARE_HANDLE(HMENU);
-W32_DECLARE_HANDLE(HRAWINPUT);
-W32_DECLARE_HANDLE(HMONITOR);
-
-typedef char *va_list;
-typedef HINSTANCE HMODULE;
-typedef unsigned int UINT;
-typedef void *INT_PTR;
 typedef unsigned long long UINT_PTR;
 typedef long long LONG_PTR;
-typedef unsigned long long ULONG_PTR, *PULONG_PTR;
-typedef unsigned long long ULONGLONG;
-typedef long long LONGLONG;
-typedef signed long GLsizeiptr;
-typedef UINT_PTR WPARAM;
-typedef LONG_PTR LPARAM;
-typedef LONG_PTR LRESULT;
-typedef char CHAR;
-typedef const CHAR *LPCSTR, *PCSTR;
-typedef unsigned short WCHAR;
-typedef WCHAR *NWPSTR, *LPWSTR, *PWSTR;
-typedef const WCHAR *LPCWSTR, *PCWSTR;
-typedef CHAR *NPSTR, *LPSTR, *PSTR;
-typedef void *LPVOID;
-typedef void *PVOID;
-typedef void *HDC;
-typedef void *HGLRC;
-typedef PVOID HANDLE;
-typedef unsigned long DWORD;
-typedef unsigned short WORD;
-typedef WORD ATOM;
-typedef LRESULT(W32_CALLBACK *WNDPROC)(HWND, UINT, WPARAM, LPARAM);
-typedef HICON HCURSOR;
-typedef int BOOL;
-typedef long LONG;
-typedef unsigned char BYTE;
-typedef BYTE *LPBYTE;
-typedef INT_PTR (*PROC)(void);
-typedef ULONG_PTR DWORD_PTR, *PDWORD_PTR;
-typedef ULONG_PTR SIZE_T, *PSIZE_T;
-typedef DWORD *LPDWORD;
-typedef DWORD ULONG;
-typedef DWORD *PDWORD;
-typedef unsigned short USHORT;
-typedef unsigned int *PUINT;
-typedef float FLOAT;
-typedef unsigned char GLubyte;
-typedef unsigned int GLenum;
-typedef int GLintptr;
-typedef float GLclampf;
-typedef unsigned int GLuint;
-typedef unsigned int GLbitfield;
-typedef int GLsizei;
-typedef char GLchar;
-typedef int GLint;
-typedef void GLvoid;
-typedef unsigned char GLboolean;
-typedef float GLfloat;
-typedef struct __GLsync *GLsync;
+
+typedef LONG_PTR(W32_CALLBACK *WNDPROC)(void *, unsigned int, UINT_PTR, LONG_PTR);
+typedef void *(*PROC)(void);
 
 typedef struct tagPOINT
 {
-    LONG x;
-    LONG y;
-} POINT, *PPOINT, *LPPOINT;
+    long x;
+    long y;
+} POINT;
 
 typedef struct tagMSG
 {
-    HWND hwnd;
-    UINT message;
-    WPARAM wParam;
-    LPARAM lParam;
-    DWORD time;
+    void *hwnd;
+    unsigned int message;
+    UINT_PTR wParam;
+    LONG_PTR lParam;
+    unsigned long time;
     POINT pt;
-    DWORD lPrivate;
+    unsigned long lPrivate;
 } MSG, *LPMSG;
 
 typedef struct WNDCLASSA
 {
-    UINT style;
+    unsigned int style;
     WNDPROC lpfnWndProc;
     int cbClsExtra;
     int cbWndExtra;
-    HINSTANCE hInstance;
-    HICON hIcon;
-    HCURSOR hCursor;
-    HBRUSH hbrBackground;
-    LPCSTR lpszMenuName;
-    LPCSTR lpszClassName;
+    void *hInstance;
+    void *hIcon;
+    void *hCursor;
+    void *hbrBackground;
+    char *lpszMenuName;
+    char *lpszClassName;
 } WNDCLASSA;
 
 typedef struct FILETIME
 {
-    DWORD dwLowDateTime;
-    DWORD dwHighDateTime;
+    unsigned long dwLowDateTime;
+    unsigned long dwHighDateTime;
 } FILETIME;
 
 typedef struct WIN32_FILE_ATTRIBUTE_DATA
 {
-    DWORD dwFileAttributes;
+    unsigned long dwFileAttributes;
     FILETIME ftCreationTime;
     FILETIME ftLastAccessTime;
     FILETIME ftLastWriteTime;
-    DWORD nFileSizeHigh;
-    DWORD nFileSizeLow;
+    unsigned long nFileSizeHigh;
+    unsigned long nFileSizeLow;
 } WIN32_FILE_ATTRIBUTE_DATA;
 
 typedef enum GET_FILEEX_INFO_LEVELS
@@ -149,95 +84,95 @@ typedef enum GET_FILEEX_INFO_LEVELS
 
 typedef struct tagRECT
 {
-    LONG left;
-    LONG top;
-    LONG right;
-    LONG bottom;
+    long left;
+    long top;
+    long right;
+    long bottom;
 } RECT, *PRECT, *LPRECT;
 
 typedef union _LARGE_INTEGER
 {
     struct
     {
-        DWORD LowPart;
-        LONG HighPart;
+        unsigned long LowPart;
+        long HighPart;
     } u;
-    LONGLONG QuadPart;
+    LONG_PTR QuadPart;
 } LARGE_INTEGER;
 
 typedef struct tagPIXELFORMATDESCRIPTOR
 {
-    WORD nSize;
-    WORD nVersion;
-    DWORD dwFlags;
-    BYTE iPixelType;
-    BYTE cColorBits;
-    BYTE cRedBits;
-    BYTE cRedShift;
-    BYTE cGreenBits;
-    BYTE cGreenShift;
-    BYTE cBlueBits;
-    BYTE cBlueShift;
-    BYTE cAlphaBits;
-    BYTE cAlphaShift;
-    BYTE cAccumBits;
-    BYTE cAccumRedBits;
-    BYTE cAccumGreenBits;
-    BYTE cAccumBlueBits;
-    BYTE cAccumAlphaBits;
-    BYTE cDepthBits;
-    BYTE cStencilBits;
-    BYTE cAuxBuffers;
-    BYTE iLayerType;
-    BYTE bReserved;
-    DWORD dwLayerMask;
-    DWORD dwVisibleMask;
-    DWORD dwDamageMask;
+    unsigned short nSize;
+    unsigned short nVersion;
+    unsigned long dwFlags;
+    unsigned char iPixelType;
+    unsigned char cColorBits;
+    unsigned char cRedBits;
+    unsigned char cRedShift;
+    unsigned char cGreenBits;
+    unsigned char cGreenShift;
+    unsigned char cBlueBits;
+    unsigned char cBlueShift;
+    unsigned char cAlphaBits;
+    unsigned char cAlphaShift;
+    unsigned char cAccumBits;
+    unsigned char cAccumRedBits;
+    unsigned char cAccumGreenBits;
+    unsigned char cAccumBlueBits;
+    unsigned char cAccumAlphaBits;
+    unsigned char cDepthBits;
+    unsigned char cStencilBits;
+    unsigned char cAuxBuffers;
+    unsigned char iLayerType;
+    unsigned char bReserved;
+    unsigned long dwLayerMask;
+    unsigned long dwVisibleMask;
+    unsigned long dwDamageMask;
 } PIXELFORMATDESCRIPTOR, *LPPIXELFORMATDESCRIPTOR;
 
 typedef struct RAWINPUTDEVICE
 {
-    USHORT usUsagePage;
-    USHORT usUsage;
-    DWORD dwFlags;
-    HWND hwndTarget;
+    unsigned short usUsagePage;
+    unsigned short usUsage;
+    unsigned long dwFlags;
+    void *hwndTarget;
 } RAWINPUTDEVICE;
 
 typedef struct RAWINPUTHEADER
 {
-    DWORD dwType;
-    DWORD dwSize;
-    HANDLE hDevice;
-    WPARAM wParam;
+    unsigned long dwType;
+    unsigned long dwSize;
+    void *hDevice;
+    UINT_PTR wParam;
 } RAWINPUTHEADER;
 
 typedef struct RAWKEYBOARD
 {
-    USHORT MakeCode;
-    USHORT Flags;
-    USHORT Reserved;
-    USHORT VKey;
-    UINT Message;
-    ULONG ExtraInformation;
+    unsigned short MakeCode;
+    unsigned short Flags;
+    unsigned short Reserved;
+    unsigned short VKey;
+    unsigned int Message;
+    unsigned long ExtraInformation;
 
 } RAWKEYBOARD;
 
 typedef struct RAWMOUSE
 {
-    USHORT usFlags;
-    ULONG ulButtons;
-    ULONG ulRawButtons;
-    LONG lLastX;
-    LONG lLastY;
-    ULONG ulExtraInformation;
+    unsigned short usFlags;
+    unsigned long ulButtons;
+    unsigned long ulRawButtons;
+    long lLastX;
+    long lLastY;
+    unsigned long ulExtraInformation;
 
 } RAWMOUSE;
 
 typedef struct RAWHID
 {
-    DWORD dwSizeHid;
-    DWORD dwCount;
-    BYTE bRawData[1];
+    unsigned long dwSizeHid;
+    unsigned long dwCount;
+    unsigned char bRawData[1];
 } RAWHID;
 
 typedef struct RAWINPUT
@@ -253,24 +188,24 @@ typedef struct RAWINPUT
 
 typedef struct _PROCESS_MEMORY_COUNTERS_EX
 {
-    DWORD cb;
-    DWORD PageFaultCount;
-    SIZE_T PeakWorkingSetSize;
-    SIZE_T WorkingSetSize;
-    SIZE_T QuotaPeakPagedPoolUsage;
-    SIZE_T QuotaPagedPoolUsage;
-    SIZE_T QuotaPeakNonPagedPoolUsage;
-    SIZE_T QuotaNonPagedPoolUsage;
-    SIZE_T PagefileUsage;
-    SIZE_T PeakPagefileUsage;
-    SIZE_T PrivateUsage;
+    unsigned long cb;
+    unsigned long PageFaultCount;
+    UINT_PTR PeakWorkingSetSize;
+    UINT_PTR WorkingSetSize;
+    UINT_PTR QuotaPeakPagedPoolUsage;
+    UINT_PTR QuotaPagedPoolUsage;
+    UINT_PTR QuotaPeakNonPagedPoolUsage;
+    UINT_PTR QuotaNonPagedPoolUsage;
+    UINT_PTR PagefileUsage;
+    UINT_PTR PeakPagefileUsage;
+    UINT_PTR PrivateUsage;
 } PROCESS_MEMORY_COUNTERS_EX, *PPROCESS_MEMORY_COUNTERS_EX;
 
 typedef struct tagWINDOWPLACEMENT
 {
-    UINT length;
-    UINT flags;
-    UINT showCmd;
+    unsigned int length;
+    unsigned int flags;
+    unsigned int showCmd;
     POINT ptMinPosition;
     POINT ptMaxPosition;
     RECT rcNormalPosition;
@@ -279,25 +214,25 @@ typedef struct tagWINDOWPLACEMENT
 
 typedef struct tagMONITORINFO
 {
-    DWORD cbSize;
+    unsigned long cbSize;
     RECT rcMonitor;
     RECT rcWork;
-    DWORD dwFlags;
+    unsigned long dwFlags;
 } MONITORINFO, *LPMONITORINFO;
 
-typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
+typedef RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 
 #define MEM_COMMIT 0x00001000
 #define MEM_RESERVE 0x00002000
 #define PAGE_READWRITE 0x04
-#define INVALID_HANDLE_VALUE ((HANDLE)(LONG_PTR) - 1)
+#define INVALID_HANDLE_VALUE ((void *)(LONG_PTR) - 1)
 #define GENERIC_READ (0x80000000L)
 #define FILE_SHARE_READ 0x00000001
 #define OPEN_EXISTING 3
 #define FILE_ATTRIBUTE_NORMAL 0x00000080
 #define FILE_FLAG_OVERLAPPED 0x40000000
-#define INVALID_FILE_SIZE ((DWORD)0xFFFFFFFF)
-#define STD_OUTPUT_HANDLE ((DWORD) - 11)
+#define INVALID_FILE_SIZE ((unsigned long)0xFFFFFFFF)
+#define STD_OUTPUT_HANDLE ((unsigned long)-11)
 #define PM_REMOVE 0x0001
 #define WM_INPUT 0x00FF
 #define WM_CLOSE 0x0010
@@ -340,10 +275,10 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define CW_USEDEFAULT ((int)0x80000000)
 #define WS_CLIPSIBLINGS 0x04000000
 #define WS_CLIPCHILDREN 0x02000000
-#define MAKEINTRESOURCEA(i) ((LPSTR)((unsigned long)((WORD)(i))))
+#define MAKEINTRESOURCEA(i) ((char *)((unsigned long)((unsigned short)(i))))
 #define IDC_ARROW MAKEINTRESOURCEA(32512)
-#define HWND_TOP ((HWND)0)
-#define HWND_TOPMOST ((HWND) - 1)
+#define HWND_TOP ((void *)0)
+#define HWND_TOPMOST ((void *)-1)
 #define SWP_NOSIZE 0x0001
 #define SWP_NOMOVE 0x0002
 #define SWP_NOOWNERZORDER 0x0200
@@ -354,8 +289,8 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 #define MONITOR_DEFAULTTOPRIMARY 0x00000001
 #define MONITOR_DEFAULTTONEAREST 0x00000002
 #define SPI_GETWORKAREA 0x0030
-#define LOWORD(l) ((WORD)(((DWORD_PTR)(l)) & 0xffff))
-#define HIWORD(l) ((WORD)((((DWORD_PTR)(l)) >> 16) & 0xffff))
+#define LOWORD(l) ((unsigned short)(((UINT_PTR)(l)) & 0xffff))
+#define HIWORD(l) ((unsigned short)((((UINT_PTR)(l)) >> 16) & 0xffff))
 #define RID_INPUT 0x10000003
 #define RIM_TYPEMOUSE 0
 #define CS_OWNDC 0x0020
@@ -450,193 +385,193 @@ typedef const RAWINPUTDEVICE *PCRAWINPUTDEVICE;
 
 /* WIN32 Function prototyes */
 #ifndef _WINDOWS_
-W32_API(BOOL)
-PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
-W32_API(BOOL)
-TranslateMessage(const MSG *lpMsg);
-W32_API(LRESULT)
-DispatchMessageA(const MSG *lpMsg);
-W32_API(BOOL)
-ShowWindow(HWND hWnd, int nCmdShow);
-W32_API(BOOL)
-DestroyWindow(HWND hWnd);
-W32_API(LRESULT)
-DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-W32_API(HCURSOR)
-LoadCursorA(HINSTANCE hInstance, LPCSTR lpCursorName);
 W32_API(int)
-ShowCursor(BOOL bShow);
-W32_API(ATOM)
-RegisterClassA(const WNDCLASSA *lpWndClass);
-W32_API(HWND)
-CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
-W32_API(BOOL)
-SetWindowTextA(HWND hWnd, LPCSTR lpString);
-W32_API(BOOL)
-SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
-W32_API(BOOL)
-AdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu);
+PeekMessageA(LPMSG lpMsg, void *hWnd, unsigned int wMsgFilterMin, unsigned int wMsgFilterMax, unsigned int wRemoveMsg);
+W32_API(int)
+TranslateMessage(MSG *lpMsg);
+W32_API(LONG_PTR)
+DispatchMessageA(MSG *lpMsg);
+W32_API(int)
+ShowWindow(void *hWnd, int nCmdShow);
+W32_API(int)
+DestroyWindow(void *hWnd);
+W32_API(LONG_PTR)
+DefWindowProcA(void *hWnd, unsigned int Msg, UINT_PTR wParam, LONG_PTR lParam);
+W32_API(void *)
+LoadCursorA(void *hInstance, char *lpCursorName);
+W32_API(int)
+ShowCursor(int bShow);
+W32_API(unsigned short)
+RegisterClassA(WNDCLASSA *lpWndClass);
+W32_API(void *)
+CreateWindowExA(unsigned long dwExStyle, char *lpClassName, char *lpWindowName, unsigned long dwStyle, int X, int Y, int nWidth, int nHeight, void *hWndParent, void *hMenu, void *hInstance, void *lpParam);
+W32_API(int)
+SetWindowTextA(void *hWnd, char *lpString);
+W32_API(int)
+SetWindowPos(void *hWnd, void *hWndInsertAfter, int X, int Y, int cx, int cy, unsigned int uFlags);
+W32_API(int)
+AdjustWindowRect(LPRECT lpRect, unsigned long dwStyle, int bMenu);
 W32_API(void)
-Sleep(DWORD dwMilliseconds);
+Sleep(unsigned long dwMilliseconds);
 W32_API(void)
-ExitProcess(UINT uExitCode);
+ExitProcess(unsigned int uExitCode);
 W32_API(void)
 PostQuitMessage(int nExitCode);
 W32_API(int)
-wsprintfA(LPSTR unnamedParam1, LPCSTR unnamedParam2, ...);
+wsprintfA(char *unnamedParam1, char *unnamedParam2, ...);
 W32_API(int)
-wvsprintfA(LPSTR unnamedParam1, LPCSTR unnamedParam2, va_list arglist);
+wvsprintfA(char *unnamedParam1, char *unnamedParam2, char *arglist);
 W32_API(long)
-CompareFileTime(const FILETIME *lpFileTime1, const FILETIME *lpFileTime2);
-W32_API(BOOL)
-GetFileAttributesExA(LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
-W32_API(BOOL)
-CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists);
-W32_API(HMODULE)
-LoadLibraryA(LPCSTR lpLibFileName);
-W32_API(BOOL)
-FreeLibrary(HMODULE hLibModule);
-W32_API(INT_PTR)
-GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
-W32_API(BOOL)
-CloseHandle(HANDLE hObject);
-W32_API(BOOL)
-GetClientRect(HWND hWnd, LPRECT lpRect);
+CompareFileTime(FILETIME *lpFileTime1, FILETIME *lpFileTime2);
 W32_API(int)
-MapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, UINT cPoints);
-W32_API(BOOL)
-ClipCursor(const RECT *lpRect);
-W32_API(BOOL)
-GetCursorPos(LPPOINT lpPoint);
-W32_API(BOOL)
+GetFileAttributesExA(char *lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, void *lpFileInformation);
+W32_API(int)
+CopyFileA(char *lpExistingFileName, char *lpNewFileName, int bFailIfExists);
+W32_API(void *)
+LoadLibraryA(char *lpLibFileName);
+W32_API(int)
+FreeLibrary(void *hLibModule);
+W32_API(void *)
+GetProcAddress(void *hModule, char *lpProcName);
+W32_API(int)
+CloseHandle(void *hObject);
+W32_API(int)
+GetClientRect(void *hWnd, LPRECT lpRect);
+W32_API(int)
+MapWindowPoints(void *hWndFrom, void *hWndTo, POINT *lpPoints, unsigned int cPoints);
+W32_API(int)
+ClipCursor(RECT *lpRect);
+W32_API(int)
+GetCursorPos(POINT *lpPoint);
+W32_API(int)
 SetCursorPos(int X, int Y);
-W32_API(BOOL)
-ScreenToClient(HWND hWnd, LPPOINT lpPoint);
-W32_API(BOOL)
-ClientToScreen(HWND hWnd, LPPOINT lpPoint);
-W32_API(BOOL)
+W32_API(int)
+ScreenToClient(void *hWnd, POINT *lpPoint);
+W32_API(int)
+ClientToScreen(void *hWnd, POINT *lpPoint);
+W32_API(int)
 QueryPerformanceCounter(LARGE_INTEGER *lpPerformanceCount);
-W32_API(BOOL)
+W32_API(int)
 QueryPerformanceFrequency(LARGE_INTEGER *lpFrequency);
-W32_API(BOOL)
-SystemParametersInfoA(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni);
-W32_API(BOOL)
-SwapBuffers(HDC unnamedParam1);
-W32_API(HDC)
-GetDC(HWND hWnd);
 W32_API(int)
-ReleaseDC(HWND hWnd, HDC hDC);
-W32_API(BOOL)
-TextOutA(HDC hdc, int x, int y, LPCSTR lpString, int c);
+SystemParametersInfoA(unsigned int uiAction, unsigned int uiParam, void *pvParam, unsigned int fWinIni);
 W32_API(int)
-ChoosePixelFormat(HDC hdc, const PIXELFORMATDESCRIPTOR *ppfd);
-W32_API(BOOL)
-SetPixelFormat(HDC hdc, int format, const PIXELFORMATDESCRIPTOR *ppfd);
+SwapBuffers(void *unnamedParam1);
+W32_API(void *)
+GetDC(void *hWnd);
 W32_API(int)
-DescribePixelFormat(HDC hdc, int iPixelFormat, UINT nBytes, LPPIXELFORMATDESCRIPTOR ppfd);
-W32_API(HANDLE)
-CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, void *, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
-W32_API(BOOL)
-ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, void *lpOverlapped);
-W32_API(DWORD)
-GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh);
-W32_API(LPVOID)
-HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-W32_API(HANDLE)
+ReleaseDC(void *hWnd, void *hDC);
+W32_API(int)
+TextOutA(void *hdc, int x, int y, char *lpString, int c);
+W32_API(int)
+ChoosePixelFormat(void *hdc, PIXELFORMATDESCRIPTOR *ppfd);
+W32_API(int)
+SetPixelFormat(void *hdc, int format, PIXELFORMATDESCRIPTOR *ppfd);
+W32_API(int)
+DescribePixelFormat(void *hdc, int iPixelFormat, unsigned int nBytes, LPPIXELFORMATDESCRIPTOR ppfd);
+W32_API(void *)
+CreateFileA(char *lpFileName, unsigned long dwDesiredAccess, unsigned long dwShareMode, void *, unsigned long dwCreationDisposition, unsigned long dwFlagsAndAttributes, void *hTemplateFile);
+W32_API(int)
+ReadFile(void *hFile, void *lpBuffer, unsigned long nNumberOfBytesToRead, unsigned long *lpNumberOfBytesRead, void *lpOverlapped);
+W32_API(unsigned long)
+GetFileSize(void *hFile, unsigned long *lpFileSizeHigh);
+W32_API(void *)
+HeapAlloc(void *hHeap, unsigned longdwFlags, UINT_PTR dwBytes);
+W32_API(void *)
 GetProcessHeap(void);
-W32_API(BOOL)
-HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
-W32_API(LPVOID)
-VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
-W32_API(HANDLE)
-GetStdHandle(DWORD nStdHandle);
-W32_API(BOOL)
-WriteConsoleA(HANDLE hConsoleOutput, const void *lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved);
-W32_API(HGLRC)
-wglCreateContext(HDC unnamedParam1);
-W32_API(HGLRC)
+W32_API(int)
+HeapFree(void *hHeap, unsigned longdwFlags, void *lpMem);
+W32_API(void *)
+VirtualAlloc(void *lpAddress, UINT_PTR dwSize, unsigned longflAllocationType, unsigned longflProtect);
+W32_API(void *)
+GetStdHandle(unsigned long nStdHandle);
+W32_API(int)
+WriteConsoleA(void *hConsoleOutput, void *lpBuffer, unsigned longnNumberOfCharsToWrite, unsigned long *lpNumberOfCharsWritten, void *lpReserved);
+W32_API(void *)
+wglCreateContext(void *unnamedParam1);
+W32_API(void *)
 wglGetCurrentContext(void);
-W32_API(HDC)
+W32_API(void *)
 wglGetCurrentDC(void);
-W32_API(BOOL)
-wglDeleteContext(HGLRC unnamedParam1);
-W32_API(BOOL)
-wglMakeCurrent(HDC unnamedParam1, HGLRC unnamedParam2);
+W32_API(int)
+wglDeleteContext(void *unnamedParam1);
+W32_API(int)
+wglMakeCurrent(void *unnamedParam1, void *unnamedParam2);
 W32_API(PROC)
-wglGetProcAddress(LPCSTR unnamedParam1);
+wglGetProcAddress(char *unnamedParam1);
 /* Windows provided OPEN GL 1.X functions */
-W32_API(const GLubyte) * glGetString(GLenum name);
+W32_API(unsigned char) * glGetString(unsigned int name);
 W32_API(void)
-glClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
+glClearColor(float red, float green, float blue, float alpha);
 W32_API(void)
-glClear(GLbitfield mask);
-W32_API(GLenum)
+glClear(unsigned int mask);
+W32_API(unsigned int)
 glGetError(void);
 W32_API(void)
-glEnable(GLenum cap);
+glEnable(unsigned int cap);
 W32_API(void)
-glDisable(GLenum cap);
+glDisable(unsigned int cap);
 W32_API(void)
-glBlendFunc(GLenum sfactor, GLenum dfactor);
+glBlendFunc(unsigned int sfactor, unsigned int dfactor);
 W32_API(void)
-glPolygonMode(GLenum face, GLenum mode);
+glPolygonMode(unsigned int face, unsigned int mode);
 W32_API(void)
-glCullFace(GLenum mode);
+glCullFace(unsigned int mode);
 W32_API(void)
-glFrontFace(GLenum mode);
+glFrontFace(unsigned int mode);
 W32_API(void)
-glViewport(GLint x, GLint y, GLsizei width, GLsizei height);
+glViewport(int x, int y, int width, int height);
 W32_API(void)
-glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+glDrawElements(unsigned int mode, int count, unsigned int type, void *indices);
 W32_API(void)
-glColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+glColorMask(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
 W32_API(void)
-glDepthMask(GLboolean flag);
+glDepthMask(unsigned char flag);
 W32_API(void)
-glReadBuffer(GLenum mode);
+glReadBuffer(unsigned int mode);
 W32_API(void)
-glDrawBuffer(GLenum mode);
+glDrawBuffer(unsigned int mode);
 W32_API(void)
-glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
+glReadPixels(int x, int y, int width, int height, unsigned int format, unsigned int type, void *pixels);
 W32_API(void)
-glGenTextures(GLsizei n, GLuint *textures);
+glGenTextures(int n, unsigned int *textures);
 W32_API(void)
-glBindTexture(GLenum target, GLuint texture);
+glBindTexture(unsigned int target, unsigned int texture);
 W32_API(void)
-glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLint format, GLenum type, const GLvoid *pixels);
+glTexImage2D(unsigned int target, int level, int internalformat, int width, int height, int border, int format, unsigned int type, void *pixels);
 W32_API(void)
-glTexParameteri(GLenum target, GLenum pname, GLint param);
+glTexParameteri(unsigned int target, unsigned int pname, int param);
 W32_API(void)
-glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
-W32_API(BOOL)
-RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
-W32_API(UINT)
-GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
-W32_API(HANDLE)
+glTexParameterfv(unsigned int target, unsigned int pname, float *params);
+W32_API(int)
+RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, unsigned int uiNumDevices, unsigned int cbSize);
+W32_API(unsigned int)
+GetRawInputData(void *hRawInput, unsigned int uiCommand, void *pData, unsigned int *pcbSize, unsigned int cbSizeHeader);
+W32_API(void *)
 GetCurrentProcess(void);
-W32_API(BOOL)
-GetProcessHandleCount(HANDLE hProcess, PDWORD pdwHandleCount);
-W32_API(BOOL)
-K32GetProcessMemoryInfo(HANDLE Process, PPROCESS_MEMORY_COUNTERS_EX ppsmemCounters, DWORD cb);
-W32_API(LONG)
-GetWindowLongA(HWND hWnd, int nIndex);
-W32_API(BOOL)
-GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
-W32_API(BOOL)
-GetMonitorInfoA(HMONITOR hMonitor, LPMONITORINFO lpmi);
-W32_API(HMONITOR)
-MonitorFromWindow(HWND hwnd, DWORD dwFlags);
-W32_API(LONG)
-SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);
-W32_API(BOOL)
-SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
-W32_API(BOOL)
-SetWindowPlacement(HWND hWnd, const WINDOWPLACEMENT *lpwndpl);
+W32_API(int)
+GetProcessHandleCount(void *hProcess, unsigned long *pdwHandleCount);
+W32_API(int)
+K32GetProcessMemoryInfo(void *Process, PPROCESS_MEMORY_COUNTERS_EX ppsmemCounters, unsigned long cb);
+W32_API(long)
+GetWindowLongA(void *hWnd, int nIndex);
+W32_API(int)
+GetWindowPlacement(void *hWnd, WINDOWPLACEMENT *lpwndpl);
+W32_API(int)
+GetMonitorInfoA(void *hMonitor, LPMONITORINFO lpmi);
+W32_API(void *)
+MonitorFromWindow(void *hwnd, unsigned long dwFlags);
+W32_API(long)
+SetWindowLongA(void *hWnd, int nIndex, long dwNewLong);
+W32_API(int)
+SetWindowPos(void *hWnd, void *hWndInsertAfter, int X, int Y, int cx, int cy, unsigned int uFlags);
+W32_API(int)
+SetWindowPlacement(void *hWnd, WINDOWPLACEMENT *lpwndpl);
 #endif
 
-DWORD w32_strlen(const char *str)
+unsigned long w32_strlen(char *str)
 {
-    DWORD length = 0;
+    unsigned long length = 0;
     while (str[length] != '\0')
     {
         length++;
@@ -644,10 +579,10 @@ DWORD w32_strlen(const char *str)
     return length;
 }
 
-void win32_printf(const char *str)
+void win32_printf(char *str)
 {
-    DWORD written;
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    unsigned long written;
+    void *hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     WriteConsoleA(hConsole, str, w32_strlen(str), &written, NULL);
 }
 
