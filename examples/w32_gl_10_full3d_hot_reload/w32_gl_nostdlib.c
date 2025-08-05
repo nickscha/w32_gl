@@ -119,7 +119,7 @@ typedef struct speg_shaders
 
 static speg_shaders shaders;
 
-unsigned int shader_compile(const char *shaderCode, GLenum shaderType)
+unsigned int shader_compile(char *shaderCode, GLenum shaderType)
 {
 
   unsigned int shaderId = glCreateShader(shaderType);
@@ -1090,7 +1090,7 @@ mainCRTStartup(void)
 
   HDC dc = GetDC(window);
 
-  const int pixelAttribs[] = {
+  int pixelAttribs[] = {
       WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
       WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
       WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
