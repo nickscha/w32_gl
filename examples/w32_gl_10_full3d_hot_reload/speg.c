@@ -1,4 +1,5 @@
 #include "speg.h"
+#define VM_USE_SSE
 #include "vm.h"
 
 typedef struct speg_controller_input
